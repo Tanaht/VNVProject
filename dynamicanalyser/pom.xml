@@ -49,7 +49,7 @@
             <artifactId>exec-maven-plugin</artifactId>
             <version>1.6.0</version>
             <configuration>
-                <mainClass>m2.vv.tutorials.App</mainClass>
+                <mainClass>fr.istic.vnv.App</mainClass>
             </configuration>
         </plugin>
         <plugin>
