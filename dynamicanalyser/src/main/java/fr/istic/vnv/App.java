@@ -26,8 +26,8 @@ public class App
                 public void onLoad(ClassPool classPool, String s) throws NotFoundException, CannotCompileException {
                     log.info(s);
 
-                    //MutateOnLoad mutate = new MutateOnLoad(classPool.getCtClass(s));
-                    //mutate.printMethods();
+                    ClassHandler handler = new ClassHandler(classPool.get(s));
+                    handler.handle();
                 }
             };
 
