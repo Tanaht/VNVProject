@@ -1,5 +1,7 @@
 package fr.istic.vnv;
 
+import fr.istic.vnv.bytecodehandler.BlockClassHandler;
+import fr.istic.vnv.bytecodehandler.ClassHandler;
 import javassist.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +28,7 @@ public class App
                 public void onLoad(ClassPool classPool, String s) throws NotFoundException, CannotCompileException {
                     log.info(s);
 
-                    ClassHandler handler = new ClassHandler(classPool.get(s));
+                    ClassHandler handler = new BlockClassHandler(classPool.get(s));
                     handler.handle();
                 }
             };
@@ -48,5 +50,21 @@ public class App
             System.out.println(exc.getMessage());
             exc.printStackTrace();
         }
+    }
+
+    public static String helloWorld() {
+        return "Hello World";
+    }
+
+
+    public static String helloWhat(boolean b) {
+        String returnMsg = "";
+        if(b) {
+            returnMsg = "True";
+        } else {
+            returnMsg = "False";
+        }
+
+        return "Hello " + returnMsg;
     }
 }

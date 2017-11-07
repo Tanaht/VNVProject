@@ -1,11 +1,10 @@
-package fr.istic.vnv;
+package fr.istic.vnv.bytecodehandler;
 
 import javassist.CtMethod;
-import javassist.bytecode.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MethodHandler {
+public abstract class MethodHandler {
 
     private static Logger log = LoggerFactory.getLogger(MethodHandler.class);
 
@@ -15,7 +14,11 @@ public class MethodHandler {
         this.ctMethod = method;
     }
 
-    void handle() {
+    public CtMethod getCtMethod() {
+        return ctMethod;
+    }
+
+    abstract void handle();/* {
         log.info("Handling {}", this.ctMethod.getName());
         CodeAttribute codeAttribute = this.ctMethod.getMethodInfo().getCodeAttribute();
 
@@ -31,9 +34,9 @@ public class MethodHandler {
                log.error("Failed to rewrite bytecode correctly: {}", badBytecode.getMessage());
             }
         }
-    }
+    }*/
 
-    private void insertToStringFragments(CodeIterator codeIterator, int index, String message) throws BadBytecode {
+   /* private void insertToStringFragments(CodeIterator codeIterator, int index, String message) throws BadBytecode {
         if(index < 0) {
             //log.warn(": {}", ctMethod.getLongName());
             index = 0;
@@ -45,5 +48,5 @@ public class MethodHandler {
         bytecode.addGap(1);
 
         codeIterator.insertAt(index, bytecode.get());
-    }
+    }*/
 }

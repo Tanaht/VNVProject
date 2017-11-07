@@ -1,4 +1,4 @@
-package fr.istic.vnv;
+package fr.istic.vnv.bytecodehandler;
 
 import javassist.CtClass;
 import javassist.CtMethod;
@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ClassHandler {
+public abstract class ClassHandler {
 
     private static Logger log = LoggerFactory.getLogger(ClassHandler.class);
 
@@ -20,15 +20,19 @@ public class ClassHandler {
         this.methods = new ArrayList<>();
 
         for(CtMethod method : this.ctClass.getDeclaredMethods()) {
-            this.methods.add(new MethodHandler(method));
+            this.methods.add(this.createMethodHandlerFor(method));
         }
     }
 
-    void handle() {
-        log.info("Handling {}", this.ctClass.getName());
-
-        for(MethodHandler handler : this.methods) {
-            handler.handle();
-        }
+    public CtClass getCtClass() {
+        return ctClass;
     }
+
+    public List<MethodHandler> getMethodHandlers() {
+        return methods;
+    }
+
+    public abstract MethodHandler createMethodHandlerFor(CtMethod method);
+
+    public abstract void handle();
 }
