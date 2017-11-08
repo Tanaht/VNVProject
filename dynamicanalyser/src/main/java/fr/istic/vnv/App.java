@@ -2,6 +2,7 @@ package fr.istic.vnv;
 
 import fr.istic.vnv.bytecodehandler.BlockClassHandler;
 import fr.istic.vnv.bytecodehandler.ClassHandler;
+import fr.istic.vnv.metadata.MetadataClassGenerator;
 import javassist.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +19,12 @@ public class App
     {
         try {
             ClassPool pool = ClassPool.getDefault();
-            Loader loader = new Loader(pool);
 
+            MetadataClassGenerator generator = new MetadataClassGenerator(pool);
+
+            //CtClass singleton = generator.generateSingleton();
+
+            Loader loader = new Loader(pool);
             Translator logger = new Translator() {
                 public void start(ClassPool classPool) throws NotFoundException, CannotCompileException {
                     System.out.println("Starting");
@@ -35,6 +40,7 @@ public class App
 
             loader.addTranslator(pool, logger);
 
+            //singleton.writeFile("input/target/classes");
             pool.appendClassPath("input/target/classes");
 
 

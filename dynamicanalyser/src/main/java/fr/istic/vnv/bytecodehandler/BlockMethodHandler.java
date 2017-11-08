@@ -1,5 +1,6 @@
 package fr.istic.vnv.bytecodehandler;
 
+import javassist.CannotCompileException;
 import javassist.CtMethod;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.CodeAttribute;
@@ -22,11 +23,25 @@ public class BlockMethodHandler extends MethodHandler {
     @Override
     void handle() {
         log.info("START ================ {} ================", this.getCtMethod().getName());
-        printer.print(this.getCtMethod());
+//        printer.print(this.getCtMethod());
+//        try {
+//            this.performFlowAnalysis();
+//        } catch (BadBytecode badBytecode) {
+//            log.error("BadBytecode Exception thrown: {}", badBytecode.getMessage());
+//        }
+//        String message = this.getCtMethod().getLongName() + "(";
+//        for(int i = 0 ; i < $args.length ; i++) {
+//            message += $args[i] + ", ";
+//        }
+//        System.err.println(message + ");");
         try {
-            this.performFlowAnalysis();
-        } catch (BadBytecode badBytecode) {
-            log.error("BadBytecode Exception thrown: {}", badBytecode.getMessage());
+            this.getCtMethod().insertBefore("{ String message = \"" + this.getCtMethod().getLongName() + "(\";\n" +
+                    "        for(int i = 0 ; i < $args.length ; i++) {\n" +
+                    "            message += $args[i] + \", \";\n" +
+                    "        }\n" +
+                    "        System.err.println(message + \");\"); }");
+        } catch (CannotCompileException e) {
+            e.printStackTrace();
         }
         log.info("END ================ {} ================", this.getCtMethod().getName());
     }
