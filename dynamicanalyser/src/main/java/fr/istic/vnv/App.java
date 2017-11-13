@@ -48,7 +48,7 @@ public class App {
         try {
             URLClassLoader classLoader = new URLClassLoader(new URL[]{testClassesFolder.toURI().toURL(), classesFolder.toURI().toURL()});
 
-            //Thread.currentThread().setContextClassLoader(classLoader);
+//            Thread.currentThread().setContextClassLoader(classLoader);
             Collection<File> testSuites = FileUtils.listFiles(testClassesFolder, new String[]{"class"}, true);
 
             log.info("Found {} test suites to run", testSuites.size());
@@ -67,7 +67,6 @@ public class App {
                 loader.addTranslator(pool, new Translator() {
                     @Override
                     public void start(ClassPool pool) throws NotFoundException, CannotCompileException {
-                        //log.debug("[JAVASSIST]  start {}", pool.get("m2.vv.tutorials.Quote").getName());
                     }
 
                     @Override
