@@ -11,9 +11,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.ProtectionDomain;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
  *
@@ -38,7 +43,9 @@ public class App {
         log.info("Start Dynamic Analysis of {}", mavenProject.getAbsolutePath());
 
         File classesFolder = FileUtils.getFile(mavenProject, "target/classes");
+//        File srcClassesFolder = FileUtils.getFile(mavenProject, "src/main/java");
         File testClassesFolder = FileUtils.getFile(mavenProject, "target/test-classes");
+//        File srcTestClassesFolder = FileUtils.getFile(mavenProject, "src/test/java");
 
         if (!testClassesFolder.exists() || !classesFolder.exists()) {
             log.warn("There is no compiled test to run or no compiles source code to test.");
@@ -48,7 +55,6 @@ public class App {
         try {
             URLClassLoader classLoader = new URLClassLoader(new URL[]{testClassesFolder.toURI().toURL(), classesFolder.toURI().toURL()});
 
-//            Thread.currentThread().setContextClassLoader(classLoader);
             Collection<File> testSuites = FileUtils.listFiles(testClassesFolder, new String[]{"class"}, true);
 
             log.info("Found {} test suites to run", testSuites.size());
@@ -62,7 +68,9 @@ public class App {
             }
 
             Loader loader = new Loader(classLoader, pool);
+
             loader.delegateLoadingOf("org.junit.");
+
             try {
                 loader.addTranslator(pool, new Translator() {
                     @Override
@@ -71,7 +79,12 @@ public class App {
 
                     @Override
                     public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
-                        log.debug("[JAVASSIST]  onLoad {}", classname);
+                        if(pool.find(classname).getPath().startsWith(testClassesFolder.getAbsolutePath())) {
+                            //It is a test class
+                            return;
+                        }
+
+                        log.info("[JAVASSIST] {}", classname);
                     }
                 });
             } catch (NotFoundException e) {
@@ -86,6 +99,7 @@ public class App {
                 ClassFile classFile = new ClassFile(new DataInputStream(new FileInputStream(testSuite.getAbsolutePath())));
                 log.debug("TestSuite ClassName: {}", classFile.getName());
                 loader.delegateLoadingOf("org.junit.");
+
                 Result result = JUnitCore.runClasses(loader.loadClass(classFile.getName()));
 
                 if (!result.wasSuccessful()) {
