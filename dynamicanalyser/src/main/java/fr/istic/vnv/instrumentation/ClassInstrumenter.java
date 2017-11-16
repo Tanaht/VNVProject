@@ -1,63 +1,27 @@
 package fr.istic.vnv.instrumentation;
 
-import fr.istic.vnv.Analysis.AnalysisContext;
-import javassist.*;
-import javassist.tools.Callback;
+import javassist.CtBehavior;
+import javassist.CtClass;
 
-public class ClassInstrumenter {
+import java.util.ArrayList;
+import java.util.List;
+
+public class ClassInstrumenter implements Instrumenter {
     private CtClass ctClass;
+
+    private List<BehaviorInstrumenter> behaviorInstrumenters;
 
     public ClassInstrumenter(CtClass ctClass) {
         this.ctClass = ctClass;
+
+        this.behaviorInstrumenters = new ArrayList<>();
+        for(CtBehavior ctBehavior : this.ctClass.getDeclaredBehaviors())
+            this.behaviorInstrumenters.add(new BehaviorInstrumenter(ctBehavior));
     }
 
     public void instrument() {
-        for(CtBehavior ctBehavior : this.ctClass.getDeclaredBehaviors()) {
-            Callback callback = new Callback("$args") {
-                @Override
-                public void result(Object[] objects) {
-                    Object[] args = (Object[]) objects[0];
-                    String trace = "[START]" + ctBehavior.getName();
 
-                    trace += "(";
-                    for (Object object : args) {
-                        trace += object.toString() + ", ";
-                    }
-                    trace += ")";
-
-                    AnalysisContext.getAnalysisContext().addExecutionTrace(trace);
-                }
-            };
-
-            try {
-                ctBehavior.insertBefore(callback.sourceCode());
-            } catch (CannotCompileException e) {
-                e.printStackTrace();
-            }
-        }
-
-        for(CtBehavior ctBehavior : this.ctClass.getDeclaredBehaviors()) {
-            Callback callback = new Callback("$args") {
-                @Override
-                public void result(Object[] objects) {
-                    Object[] args = (Object[]) objects[0];
-                    String trace = "[END]" + ctBehavior.getName();
-
-                    trace += "(";
-                    for (Object object : args) {
-                        trace += object.toString() + ", ";
-                    }
-                    trace += ")";
-
-                    AnalysisContext.getAnalysisContext().addExecutionTrace(trace);
-                }
-            };
-
-            try {
-                ctBehavior.insertAfter(callback.sourceCode());
-            } catch (CannotCompileException e) {
-                e.printStackTrace();
-            }
-        }
+        for(BehaviorInstrumenter behaviorInstrumenter : behaviorInstrumenters)
+            behaviorInstrumenter.instrument();
     }
 }
