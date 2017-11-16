@@ -1,5 +1,8 @@
 package fr.istic.vnv;
 
+import fr.istic.vnv.Report.ReportGenerator;
+import fr.istic.vnv.Report.ReportGeneratorFactory;
+import fr.istic.vnv.instrumentation.ClassInstrumenter;
 import javassist.*;
 import javassist.bytecode.ClassFile;
 import org.apache.commons.io.FileUtils;
@@ -11,14 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.security.ProtectionDomain;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.function.Consumer;
 
 /**
  *
@@ -70,6 +68,7 @@ public class App {
             Loader loader = new Loader(classLoader, pool);
 
             loader.delegateLoadingOf("org.junit.");
+            loader.delegateLoadingOf("javassist.");
 
             try {
                 loader.addTranslator(pool, new Translator() {
@@ -85,6 +84,8 @@ public class App {
                         }
 
                         log.info("[JAVASSIST] {}", classname);
+                        ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
+                        instrumenter.instrument();
                     }
                 });
             } catch (NotFoundException e) {
@@ -113,6 +114,8 @@ public class App {
                 }
             }
 
+            ReportGenerator reportGenerator = ReportGeneratorFactory.getTextReportGenerator();
+            reportGenerator.save(System.out);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (FileNotFoundException e) {
