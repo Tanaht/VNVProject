@@ -14,9 +14,12 @@ public class BehaviorInstrumenter implements Instrumenter {
 
     private Logger log = LoggerFactory.getLogger(BehaviorInstrumenter.class);
     private CtBehavior ctBehavior;
+    private ClassInstrumenter.CLASS type;
 
-    public BehaviorInstrumenter(CtBehavior behavior) {
+
+    public BehaviorInstrumenter(CtBehavior behavior, ClassInstrumenter.CLASS type) {
         this.ctBehavior = behavior;
+        this.type = type;
     }
 
     private Callback getTraceCallback(String when) {
@@ -24,11 +27,14 @@ public class BehaviorInstrumenter implements Instrumenter {
             @Override
             public void result(Object[] objects) {
                 Object[] args = (Object[]) objects[0];
-                String trace = "[" +  when + "]" + ctBehavior.getName();
+                String trace = "[" +  when + "]" + ctBehavior.getDeclaringClass().getName() + '.' + ctBehavior.getName();
 
                 trace += "(";
                 for (Object object : args) {
-                    trace += object.toString().length() > 30 ? object.hashCode() : object.toString() + ", ";
+                    if(object != null)
+                        trace += object.toString() + ", ";
+                    else
+                        trace += "null, ";
                 }
                 trace += ")";
 
@@ -43,10 +49,20 @@ public class BehaviorInstrumenter implements Instrumenter {
     }
 
     public void instrument() {
+        if(!this.type.equals(ClassInstrumenter.CLASS.COMMON)) {
+            log.info("{} is not instrumented because not common class", this.ctBehavior.getDeclaringClass().getName());
+            return;
+        }
+
+        if(this.ctBehavior.isEmpty()) {
+            log.info("{} is not instrumented because empty method body", this.ctBehavior.getLongName());
+            return;
+        }
+
         try {
             traceExecutionInstrumentation();
         } catch (CannotCompileException e) {
-            log.info("Unable to instrument {], cause {}", this.ctBehavior.getLongName(), e.getReason());
+            log.warn("Unable to instrument {}, cause {}", this.ctBehavior.getLongName(), e.getReason());
         }
     }
 }

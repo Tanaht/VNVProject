@@ -104,10 +104,10 @@ public class App {
                 Result result = JUnitCore.runClasses(loader.loadClass(classFile.getName()));
 
                 if (!result.wasSuccessful()) {
-                    log.warn("{} Test Failed out of {}", result.getFailureCount(), result.getRunCount());
+                    log.error("{} Test Failed out of {} on {}", result.getFailureCount(), result.getRunCount(), classFile.getName());
 
                     for(Failure failure : result.getFailures()) {
-                        log.warn("Failed for: {} with trace: {}", failure.toString(), failure.getTrace());
+                        log.warn("Test Failed for: {}", failure.toString());
                     }
                 } else {
                     log.info("All Test Succeed");
