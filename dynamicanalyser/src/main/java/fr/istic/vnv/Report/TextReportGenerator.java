@@ -14,7 +14,7 @@ public class TextReportGenerator extends ReportGenerator {
         stream.println("==================");
 
         for(String str : super.getContext().getExecutionTrace())
-            System.out.println(str);
+           stream.println(str);
     }
 
     /*private String printExecutionTrace(String tab, List<String> trace) {

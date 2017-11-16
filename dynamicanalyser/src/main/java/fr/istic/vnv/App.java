@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collection;
@@ -41,9 +40,7 @@ public class App {
         log.info("Start Dynamic Analysis of {}", mavenProject.getAbsolutePath());
 
         File classesFolder = FileUtils.getFile(mavenProject, "target/classes");
-//        File srcClassesFolder = FileUtils.getFile(mavenProject, "src/main/java");
         File testClassesFolder = FileUtils.getFile(mavenProject, "target/test-classes");
-//        File srcTestClassesFolder = FileUtils.getFile(mavenProject, "src/test/java");
 
         if (!testClassesFolder.exists() || !classesFolder.exists()) {
             log.warn("There is no compiled test to run or no compiles source code to test.");
@@ -52,7 +49,6 @@ public class App {
 
         try {
             URLClassLoader classLoader = new URLClassLoader(new URL[]{testClassesFolder.toURI().toURL(), classesFolder.toURI().toURL()});
-
             Collection<File> testSuites = FileUtils.listFiles(testClassesFolder, new String[]{"class"}, true);
 
             log.info("Found {} test suites to run", testSuites.size());
@@ -67,6 +63,7 @@ public class App {
 
             Loader loader = new Loader(classLoader, pool);
 
+            log.info("{}", loader.getResource("src/test/resources/existing-readable.file"));
             loader.delegateLoadingOf("org.junit.");
             loader.delegateLoadingOf("javassist.");
 
@@ -78,9 +75,18 @@ public class App {
 
                     @Override
                     public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
-                        if(pool.find(classname).getPath().startsWith(testClassesFolder.getAbsolutePath())) {
-                            //It is a test class
+                        String classLocationPath = pool.find(classname).getPath().replace("\\", "/");
+                        String testFolderPath = testClassesFolder.getAbsolutePath().replace("\\", "/");;
+
+
+                        if(classLocationPath.contains(testFolderPath)) {
+                            // TODO: Here it is a test Class that is being loaded,
+                            // so perform appropriate bytecode manipulation if needed
+                            // (like if we want to know what unit test has called what related project method, when we compute execution trace).
                             return;
+                        }
+                        else {
+                            log.info("{} neq {}", pool.find(classname).getPath(), testClassesFolder.getAbsolutePath());
                         }
 
                         log.info("[JAVASSIST] {}", classname);
@@ -115,61 +121,15 @@ public class App {
             }
 
             ReportGenerator reportGenerator = ReportGeneratorFactory.getTextReportGenerator();
-            reportGenerator.save(System.out);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+
+            PrintStream stream = new PrintStream(new File("VNVReport.txt"));
+            reportGenerator.save(stream);
+        } catch (ClassNotFoundException | IOException e) {
+            log.warn("Exception {}", e.getMessage());
+            log.error("An exception occured during analyses, please check git issues and create one if there is none of that kind at http://www.github.com/tanaht/VNVProject");
         }
 
     }
-
-//    public static void main( String[] args )
-//    {
-//        try {
-//            ClassPool pool = ClassPool.getDefault();
-//
-//            MetadataClassGenerator generator = new MetadataClassGenerator(pool);
-//
-//            //CtClass singleton = generator.generateSingleton();
-//
-//            Loader loader = new Loader(pool);
-//            Translator logger = new Translator() {
-//                public void start(ClassPool classPool) throws NotFoundException, CannotCompileException {
-//                    System.out.println("Starting");
-//                }
-//
-//                public void onLoad(ClassPool classPool, String s) throws NotFoundException, CannotCompileException {
-//                    log.info(s);
-//
-//                    ClassHandler handler = new BlockClassHandler(classPool.get(s));
-//                    handler.handle();
-//                }
-//            };
-//
-//            loader.addTranslator(pool, logger);
-//
-//            //singleton.writeFile("input/target/classes");
-//            pool.appendClassPath("input/target/classes");
-//
-//
-//            loader.run("m2.vv.tutorials.QuotesApp", args);
-//        }
-//
-//        catch(VerifyError err) {
-//            log.error(err.getMessage());
-//        }
-//
-//        catch(Throwable exc) {
-//            System.out.println("An error occured");
-//            System.out.println(exc.getMessage());
-//            exc.printStackTrace();
-//        }
-//    }
 
     public static String helloWorld() {
         return "Hello World";

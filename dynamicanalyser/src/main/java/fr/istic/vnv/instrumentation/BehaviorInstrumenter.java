@@ -45,17 +45,23 @@ public class BehaviorInstrumenter implements Instrumenter {
 
     private void traceExecutionInstrumentation() throws CannotCompileException {
         ctBehavior.insertBefore(getTraceCallback("START").sourceCode());
-        ctBehavior.insertAfter(getTraceCallback("END").sourceCode());
+
+        ctBehavior.insertAfter(new Callback("\"\"") {
+            @Override
+            public void result(Object[] objects) {
+                AnalysisContext.getAnalysisContext().addExecutionTrace("[END]");
+            }
+        }.sourceCode());
     }
 
     public void instrument() {
         if(!this.type.equals(ClassInstrumenter.CLASS.COMMON)) {
-            log.info("{} is not instrumented because not common class", this.ctBehavior.getDeclaringClass().getName());
+            log.trace("{} is not instrumented because not common class", this.ctBehavior.getDeclaringClass().getName());
             return;
         }
 
         if(this.ctBehavior.isEmpty()) {
-            log.info("{} is not instrumented because empty method body", this.ctBehavior.getLongName());
+            log.trace("{} is not instrumented because empty method body", this.ctBehavior.getLongName());
             return;
         }
 
