@@ -28,7 +28,7 @@ public class BehaviorInstrumenter implements Instrumenter {
 
                 trace += "(";
                 for (Object object : args) {
-                    trace += object.toString() + ", ";
+                    trace += object.toString().length() > 30 ? object.hashCode() : object.toString() + ", ";
                 }
                 trace += ")";
 
