@@ -1,7 +1,9 @@
 package fr.istic.vnv.Analysis;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AnalysisContext {
     private static AnalysisContext analysisContext;
@@ -13,11 +15,13 @@ public class AnalysisContext {
         return analysisContext;
     }
 
-    private AnalysisContext() {
-        executionTrace = new ArrayList<>();
-    }
-
     private List<String> executionTrace;
+    private Map<String, ClassContext> classContexts;
+
+    private AnalysisContext() {
+        this.executionTrace = new ArrayList<>();
+        this.classContexts = new HashMap<>();
+    }
 
     public void addExecutionTrace(String trace) {
         this.executionTrace.add(trace);
