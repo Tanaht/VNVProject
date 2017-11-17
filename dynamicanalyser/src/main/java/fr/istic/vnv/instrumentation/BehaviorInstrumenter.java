@@ -3,6 +3,7 @@ package fr.istic.vnv.instrumentation;
 import fr.istic.vnv.Analysis.AnalysisContext;
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
+import javassist.bytecode.BadBytecode;
 import javassist.tools.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +11,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A CtBehavior object is either a CtMethod or CtConstructor object.
  */
-public class BehaviorInstrumenter implements Instrumenter {
+public abstract class BehaviorInstrumenter implements Instrumenter {
 
     private Logger log = LoggerFactory.getLogger(BehaviorInstrumenter.class);
     private CtBehavior ctBehavior;
@@ -20,6 +21,10 @@ public class BehaviorInstrumenter implements Instrumenter {
     public BehaviorInstrumenter(CtBehavior behavior, ClassInstrumenter.CLASS type) {
         this.ctBehavior = behavior;
         this.type = type;
+    }
+
+    public CtBehavior getCtBehavior() {
+        return ctBehavior;
     }
 
     /**
@@ -68,9 +73,17 @@ public class BehaviorInstrumenter implements Instrumenter {
         }
 
         try {
+            branchCoverageInstrumentation();
+        } catch (BadBytecode badBytecode) {
+            log.error("Unable to perform branch coverage instrumentation {}, cause {}", this.ctBehavior.getLongName(), badBytecode.getMessage());
+        }
+
+        try {
             traceExecutionInstrumentation();
         } catch (CannotCompileException e) {
-            log.warn("Unable to instrument {}, cause {}", this.ctBehavior.getLongName(), e.getReason());
+            log.error("Unable to perform trace execution instrumentation {}, cause {}", this.ctBehavior.getLongName(), e.getReason());
         }
     }
+
+    protected abstract void branchCoverageInstrumentation() throws BadBytecode;
 }

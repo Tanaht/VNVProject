@@ -70,7 +70,10 @@ public class App {
 
             Loader loader = new Loader(classLoader, pool);
 
-            log.info("{}", loader.getResource("src/test/resources/existing-readable.file"));
+            /*
+             * Do not instrument the folowing packages:
+             * (by default Javassist do not instrument java.lang.* and other native methods)
+             */
             loader.delegateLoadingOf("org.junit.");
             loader.delegateLoadingOf("javassist.");
 
@@ -94,14 +97,13 @@ public class App {
                         }
 
                         log.trace("[JAVASSIST] {}", classname);
+
                         ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
                         instrumenter.instrument();
                     }
                 });
-            } catch (NotFoundException e) {
-                e.printStackTrace();
-            } catch (CannotCompileException e) {
-                e.printStackTrace();
+            } catch (NotFoundException | CannotCompileException e) {
+                log.error("Unable to instrument some method due to: {}", e.getMessage());
             }
 
 
@@ -115,7 +117,7 @@ public class App {
                 }
 
                 log.debug("TestSuite ClassName: {}", classFile.getName());
-                loader.delegateLoadingOf("org.junit.");
+
                 Result result = JUnitCore.runClasses(loader.loadClass(classFile.getName()));
 
                 if (!result.wasSuccessful()) {
@@ -125,7 +127,7 @@ public class App {
                         log.warn("Test Failed for: {}", failure.toString());
                     }
                 } else {
-                    log.info("All Test Succeed");
+                    log.debug("All Test Succeed");
                 }
             }
 
