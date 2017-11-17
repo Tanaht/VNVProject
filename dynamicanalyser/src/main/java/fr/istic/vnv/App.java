@@ -15,7 +15,10 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  *
@@ -51,6 +54,10 @@ public class App {
             URLClassLoader classLoader = new URLClassLoader(new URL[]{testClassesFolder.toURI().toURL(), classesFolder.toURI().toURL()});
             Collection<File> testSuites = FileUtils.listFiles(testClassesFolder, new String[]{"class"}, true);
 
+            Stream<File> fileStream = testSuites.stream();
+
+            testSuites = fileStream.filter(file -> !file.getName().contains("$")).collect(Collectors.toCollection(ArrayList::new));
+
             log.info("Found {} test suites to run", testSuites.size());
             ClassPool pool = ClassPool.getDefault();
 
@@ -85,11 +92,8 @@ public class App {
                             // (like if we want to know what unit test has called what related project method, when we compute execution trace).
                             return;
                         }
-                        else {
-                            log.info("{} neq {}", pool.find(classname).getPath(), testClassesFolder.getAbsolutePath());
-                        }
 
-                        log.info("[JAVASSIST] {}", classname);
+                        log.trace("[JAVASSIST] {}", classname);
                         ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
                         instrumenter.instrument();
                     }

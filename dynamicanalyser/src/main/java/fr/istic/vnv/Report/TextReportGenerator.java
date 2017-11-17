@@ -13,25 +13,16 @@ public class TextReportGenerator extends ReportGenerator {
         stream.println("Execution Trace:");
         stream.println("==================");
 
-        for(String str : super.getContext().getExecutionTrace())
-           stream.println(str);
-    }
+        String tabs = "";
+        for(String str : super.getContext().getExecutionTrace()) {
 
-    /*private String printExecutionTrace(String tab, List<String> trace) {
-        if(trace.size() < 1)
-            return "";
-
-        String current = trace.get(0);
-
-
-        if(current.startsWith("[START]")) {
-            return tab + current + '\n' + printExecutionTrace(tab + '\t', trace.subList(1, trace.size()));
-        } else if(current.startsWith("[END]")) {
-            log.info("tab size {}", tab.length());
-            tab = tab.substring(1);
-            return tab + current + '\n' + printExecutionTrace(tab, trace.subList(1, trace.size()));
+            if(str.startsWith("[START]")) {
+                stream.println(tabs + str);
+                tabs += "\t";
+            } else if(str.startsWith("[END]")) {
+                tabs = tabs.substring(1);
+                stream.println(tabs + str);
+            }
         }
-
-        throw new RuntimeException("Should never be executed");
-    }*/
+    }
 }

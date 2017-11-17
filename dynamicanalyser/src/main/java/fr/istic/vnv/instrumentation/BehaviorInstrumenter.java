@@ -22,29 +22,31 @@ public class BehaviorInstrumenter implements Instrumenter {
         this.type = type;
     }
 
-    private Callback getTraceCallback(String when) {
-        return new Callback("$args") {
+    /**
+     * Manipulate Methods and Constructors to be aware when methods are being called and with what kind of parameters.
+     * @throws CannotCompileException
+     */
+    private void traceExecutionInstrumentation() throws CannotCompileException {
+        ctBehavior.insertBefore(new Callback("$args") {
             @Override
             public void result(Object[] objects) {
                 Object[] args = (Object[]) objects[0];
-                String trace = "[" +  when + "]" + ctBehavior.getDeclaringClass().getName() + '.' + ctBehavior.getName();
+                String trace = "[START]" + ctBehavior.getDeclaringClass().getName() + '.' + ctBehavior.getName();
 
                 trace += "(";
                 for (Object object : args) {
-                    if(object != null)
-                        trace += object.toString() + ", ";
-                    else
+                    if(object != null) {
+//                        TODO: When time comes generate a helper to pretty print method parameters to handle primitive type and other well known type (List, Map, String, int, double)
+//                        For Other object we will only print his hashcode.
+                        trace += object.toString().length() > 30 ? object.hashCode() : object.toString() + ", ";
+                    } else
                         trace += "null, ";
                 }
                 trace += ")";
 
                 AnalysisContext.getAnalysisContext().addExecutionTrace(trace);
             }
-        };
-    }
-
-    private void traceExecutionInstrumentation() throws CannotCompileException {
-        ctBehavior.insertBefore(getTraceCallback("START").sourceCode());
+        }.sourceCode());
 
         ctBehavior.insertAfter(new Callback("\"\"") {
             @Override
