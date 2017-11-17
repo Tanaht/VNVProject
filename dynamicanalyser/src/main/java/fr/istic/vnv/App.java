@@ -108,9 +108,14 @@ public class App {
 
             for (File testSuite : testSuites) {
                 ClassFile classFile = new ClassFile(new DataInputStream(new FileInputStream(testSuite.getAbsolutePath())));
+
+                if(classFile.isAbstract()) {
+                    log.trace("Abstract Test Class found: {}, it will be ignored", classFile.getName());
+                    continue;
+                }
+
                 log.debug("TestSuite ClassName: {}", classFile.getName());
                 loader.delegateLoadingOf("org.junit.");
-
                 Result result = JUnitCore.runClasses(loader.loadClass(classFile.getName()));
 
                 if (!result.wasSuccessful()) {

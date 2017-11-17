@@ -13,15 +13,15 @@ public class TextReportGenerator extends ReportGenerator {
         stream.println("Execution Trace:");
         stream.println("==================");
 
-        String tabs = "";
+//        String tabs = "";
         for(String str : super.getContext().getExecutionTrace()) {
 
             if(str.startsWith("[START]")) {
-                stream.println(tabs + str);
-                tabs += "\t";
+                stream.println(/*tabs +*/ str);
+//                tabs += "\t";
             } else if(str.startsWith("[END]")) {
-                tabs = tabs.substring(1);
-                stream.println(tabs + str);
+//                tabs = tabs.substring(1);
+                stream.println(/*tabs +*/ str);
             }
         }
     }
