@@ -27,6 +27,8 @@ import java.util.stream.Stream;
 public class App {
     private static Logger log = LoggerFactory.getLogger(App.class);
 
+    public static ClassPool pool;
+
     public static void main(String[] args) {
         if (args.length != 1) {
             log.error("Please provide path to a maven project in argument to this program.");
@@ -59,7 +61,7 @@ public class App {
             testSuites = fileStream.filter(file -> !file.getName().contains("$")).collect(Collectors.toCollection(ArrayList::new));
 
             log.info("Found {} test suites to run", testSuites.size());
-            ClassPool pool = ClassPool.getDefault();
+            pool = ClassPool.getDefault();
 
             try {
                 pool.appendClassPath(classesFolder.getPath());
@@ -76,6 +78,7 @@ public class App {
              */
             loader.delegateLoadingOf("org.junit.");
             loader.delegateLoadingOf("javassist.");
+            loader.delegateLoadingOf("fr.istic.vnv.");
 
             try {
                 loader.addTranslator(pool, new Translator() {

@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClassInstrumenter implements Instrumenter {
-    private Logger log = LoggerFactory.getLogger(ClassInstrumenter.class);
+    private static Logger log = LoggerFactory.getLogger(ClassInstrumenter.class);
 
     private CtClass ctClass;
 
@@ -38,7 +38,7 @@ public class ClassInstrumenter implements Instrumenter {
     }
 
     public void instrument() {
-
+        log.trace("Instrument class {}", ctClass.getName());
         for(BehaviorInstrumenter behaviorInstrumenter : behaviorInstrumenters)
             behaviorInstrumenter.instrument();
     }
