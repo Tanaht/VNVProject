@@ -42,7 +42,7 @@ public class App {
             return;
         }
 
-        log.info("Start Dynamic Analysis of {}", mavenProject.getAbsolutePath());
+        log.info("Start Dynamic analysis of {}", mavenProject.getAbsolutePath());
 
         File classesFolder = FileUtils.getFile(mavenProject, "target/classes");
         File testClassesFolder = FileUtils.getFile(mavenProject, "target/test-classes");
@@ -119,7 +119,7 @@ public class App {
                     continue;
                 }
 
-                log.debug("TestSuite ClassName: {}", classFile.getName());
+                log.info("Run TestSuite: {}", classFile.getName());
 
                 Result result = JUnitCore.runClasses(loader.loadClass(classFile.getName()));
 
@@ -130,7 +130,7 @@ public class App {
                         log.warn("Test Failed for: {}", failure.toString());
                     }
                 } else {
-                    log.debug("All Test Succeed");
+                    log.info("All Test Succeed");
                 }
             }
 

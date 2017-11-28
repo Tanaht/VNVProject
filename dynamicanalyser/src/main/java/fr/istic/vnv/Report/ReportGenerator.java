@@ -1,6 +1,6 @@
 package fr.istic.vnv.Report;
 
-import fr.istic.vnv.Analysis.AnalysisContext;
+import fr.istic.vnv.analysis.AnalysisContext;
 
 import java.io.PrintStream;
 

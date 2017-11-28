@@ -3,6 +3,7 @@ package fr.istic.vnv.instrumentation;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtMethod;
+import javassist.bytecode.Descriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

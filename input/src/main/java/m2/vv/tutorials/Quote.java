@@ -10,7 +10,9 @@ public class Quote {
         setText(text);
     }
 
-    public String getAuthor() { return author;  }
+    public String getAuthor() {
+        return author;
+    }
 
     private void setAuthor(String author) {
         if(author == null) {
@@ -42,4 +44,23 @@ public class Quote {
         return String.format("%s - %s", author, text);
     }
 
+    public static String branchConditionallyExecuted(boolean b) {
+
+
+
+
+        if (b) {
+
+
+            return "TRUE";
+
+
+        } else {
+
+
+            return "FALSE";
+
+
+        }
+    }
 }

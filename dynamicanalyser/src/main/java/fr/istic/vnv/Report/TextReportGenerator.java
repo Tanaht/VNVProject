@@ -10,18 +10,23 @@ public class TextReportGenerator extends ReportGenerator {
 
     @Override
     public void save(PrintStream stream) {
+        stream.println("Branch Coverage:");
+        stream.println("==================");
+
+        for(String className : super.getContext().getClassContexts().keySet()) {
+            stream.println(super.getContext().getClassContext(className));
+        }
+
+        stream.println();
         stream.println("Execution Trace:");
         stream.println("==================");
 
-//        String tabs = "";
         for(String str : super.getContext().getExecutionTrace()) {
 
             if(str.startsWith("[START]")) {
-                stream.println(/*tabs +*/ str);
-//                tabs += "\t";
+                stream.println(str);
             } else if(str.startsWith("[END]")) {
-//                tabs = tabs.substring(1);
-                stream.println(/*tabs +*/ str);
+                stream.println(str);
             }
         }
     }

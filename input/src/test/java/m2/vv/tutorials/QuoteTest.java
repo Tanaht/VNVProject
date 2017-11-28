@@ -20,4 +20,9 @@ public class QuoteTest {
         Assert.assertEquals("author", quote.getAuthor());
         Assert.assertEquals("text", quote.getText());
     }
+
+    @Test
+    public void testBranchCoverage() {
+        Assert.assertEquals("TRUE",Quote.branchConditionallyExecuted(true));
+    }
 }

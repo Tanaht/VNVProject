@@ -1,11 +1,9 @@
 package fr.istic.vnv.instrumentation;
 
-import fr.istic.vnv.Analysis.AnalysisContext;
+import fr.istic.vnv.analysis.AnalysisContext;
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
-import javassist.CtMethod;
 import javassist.bytecode.BadBytecode;
-import javassist.bytecode.InstructionPrinter;
 import javassist.tools.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
