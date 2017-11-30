@@ -89,27 +89,33 @@ public class App {
                     @Override
                     public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
                         String classLocationPath = pool.find(classname).getPath().replace("\\", "/");
-                        String testFolderPath = testClassesFolder.getAbsolutePath().replace("\\", "/");;
-
-
-                        if(classLocationPath.contains(testFolderPath)) {
-                            // TODO: Here it is a test Class that is being loaded,
-                            // so perform appropriate bytecode manipulation if needed
-                            // (like if we want to know what unit test has called what related project method, when we compute execution trace).
-                            return;
-                        }
-
-                        log.trace("[JAVASSIST] {}", classname);
-
-                        ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
 
                         try{
-                            instrumenter.instrument();
-                        } catch (Exception e) {
-                            log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
+                            String testFolderPath = testClassesFolder.getCanonicalPath().replace("\\", "/");
 
-                            if(log.isTraceEnabled())
-                                e.printStackTrace();
+                            if(classLocationPath.contains(testFolderPath)) {
+                                // TODO: Here it is a test Class that is being loaded,
+                                // so perform appropriate bytecode manipulation if needed
+                                // (like if we want to know what unit test has called what related project method, when we compute execution trace).
+                                return;
+                            }
+
+                            log.trace("[JAVASSIST] {} {}", classLocationPath, classname);
+
+                            ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
+
+                            try{
+                                instrumenter.instrument();
+                            } catch (Exception e) {
+                                log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
+
+                                if(log.isTraceEnabled())
+                                    e.printStackTrace();
+                            }
+
+                        } catch (IOException e) {
+                            log.error("Unable to define if {} is in {} or not", classLocationPath, testClassesFolder.getPath());
+                            e.printStackTrace();
                         }
                     }
                 });

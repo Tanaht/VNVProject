@@ -22,6 +22,7 @@ public class ClassInstrumenter implements Instrumenter {
         ENUM,
         ARRAY,
         ANNOTATION,
+        ABSTRACT,
         COMMON;
     }
 
@@ -60,6 +61,9 @@ public class ClassInstrumenter implements Instrumenter {
 
         if(this.ctClass.isAnnotation())
             return CLASS.ANNOTATION;
+
+        if(this.ctClass.getClassFile().isAbstract())
+            return CLASS.ABSTRACT;
 
         return CLASS.COMMON;
     }
