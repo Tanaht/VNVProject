@@ -1,8 +1,14 @@
 package fr.istic.vnv.analysis;
 
+import fr.istic.vnv.instrumentation.BehaviorInstrumenter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.*;
 
 public class AnalysisContext {
+    private static Logger log = LoggerFactory.getLogger(AnalysisContext.class);
+
     private static AnalysisContext analysisContext;
 
     public static AnalysisContext getAnalysisContext() {
@@ -29,6 +35,7 @@ public class AnalysisContext {
         BehaviorContext behaviorContext = classContext.getBehaviorContext(methodName);
         behaviorContext.getLineCounter(lineNumber).increment(block);
 
+        log.trace("At {} {} Increment counter of block {} at line {}", className, methodName, block, lineNumber);
     }
 
     public static void createBranchCoverage(String className, String methodName, int block, int lineNumber) {
@@ -40,6 +47,7 @@ public class AnalysisContext {
         //This line create the appropriate lineCounter instance.
         behaviorContext.getLineCounter(lineNumber).createCounter(block);
 
+        log.trace("At {} {} Create counter of block {} at line {}", className, methodName, block, lineNumber);
     }
 
     private List<String> executionTrace;

@@ -102,7 +102,15 @@ public class App {
                         log.trace("[JAVASSIST] {}", classname);
 
                         ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
-                        instrumenter.instrument();
+
+                        try{
+                            instrumenter.instrument();
+                        } catch (Exception e) {
+                            log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
+
+                            if(log.isTraceEnabled())
+                                e.printStackTrace();
+                        }
                     }
                 });
             } catch (NotFoundException | CannotCompileException e) {
