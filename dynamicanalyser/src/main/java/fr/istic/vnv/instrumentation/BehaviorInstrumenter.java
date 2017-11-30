@@ -9,6 +9,9 @@ import javassist.tools.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * A CtBehavior object is either a CtMethod or CtConstructor object.
  */
@@ -49,8 +52,8 @@ public abstract class BehaviorInstrumenter implements Instrumenter {
         log.debug("Instrument class {}", ctBehavior.getLongName());
 
         try {
-            log.trace("Branch Coverage Instrumentation of {}", ctBehavior.getLongName());
-            branchCoverageInstrumentation();
+            log.trace("Line Coverage Instrumentation of {}", ctBehavior.getLongName());
+            lineCoverageInstrumentation();
         } catch (BadBytecode badBytecode) {
             log.error("Unable to perform branch coverage instrumentation {}, cause {}", this.ctBehavior.getLongName(), badBytecode.getMessage());
 
@@ -100,37 +103,37 @@ public abstract class BehaviorInstrumenter implements Instrumenter {
         }.sourceCode());
     }
 
-    protected void branchCoverageInstrumentation() throws BadBytecode {
+    protected void lineCoverageInstrumentation() throws BadBytecode {
 
         CodeAttribute codeAttribute = this.getCtBehavior().getMethodInfo().getCodeAttribute();
         ControlFlow flow = new ControlFlow(this.getCtBehavior().getDeclaringClass(), this.getCtBehavior().getMethodInfo());
-
         ControlFlow.Block[] blocks = flow.basicBlocks();
-        LineNumberAttribute lineNumberAttribute = (LineNumberAttribute) codeAttribute.getAttribute(LineNumberAttribute.tag);
-
-        if(blocks.length == 1)
-            return;// TODO: for now we focus on multiple blocks
+        Bytecode bytecode = null;
 
         int index = 0;
 
         while(index < blocks.length) {
-
+            //Redefine flow, blocks and iterator because when manipulating bytecode in a loop it will fail.
             flow = new ControlFlow(this.getCtBehavior().getDeclaringClass(), this.getCtBehavior().getMethodInfo());
             blocks = flow.basicBlocks();
-            lineNumberAttribute = (LineNumberAttribute) codeAttribute.getAttribute(LineNumberAttribute.tag);
             ControlFlow.Block block = blocks[index++];
 
-                CodeIterator iterator = codeAttribute.iterator();
-                Bytecode bytecode = new Bytecode(codeAttribute.getConstPool());
+            CodeIterator iterator = codeAttribute.iterator();
 
-                // TODO: For Now We record branch coverage on each start of block, it should be done on each line of each block
-                insertInvokeStatic(bytecode, block.index(), lineNumberAttribute.toLineNumber(block.position()));
+            //Retrieve list of lines inside this block and matching bytecode index.
+            List<LineNumberAttribute.Pc> pcs = getLineNumbersBetween(codeAttribute, block.position(), block.position() + block.length());
 
-                iterator.insertAt(block.position(), bytecode.get());
+            for(int i = pcs.size() -1 ; i >= 0 ; i--) {
+//                log.trace("{} block {}, pc line {}, pc index {}", this.getCtBehavior().getLongName(), block.index(), pcs.get(i).line, pcs.get(i).index);
+                bytecode = new Bytecode(codeAttribute.getConstPool());
+                insertLineCoverageCallback(bytecode, block.index(), pcs.get(i).line);
+                iterator.insertAt(pcs.get(i).index, bytecode.get());
+            }
+
         }
     }
 
-    private void insertInvokeStatic(Bytecode bytecode, int blockIndex, int lineNumber) {
+    private void insertLineCoverageCallback(Bytecode bytecode, int blockIndex, int lineNumber) {
         bytecode.addLdc(this.getCtBehavior().getDeclaringClass().getName());
         // Here we use getDescriptor to avoid anything about polymorphism in input project.
         bytecode.addLdc(this.getCtBehavior().getName() + this.getCtBehavior().getMethodInfo().getDescriptor());
@@ -143,8 +146,51 @@ public abstract class BehaviorInstrumenter implements Instrumenter {
                 lineNumber
         );
 
-        bytecode.addInvokestatic(this.self, "reportBranchCoverage", "(Ljava/lang/String;Ljava/lang/String;II)V");
+        bytecode.addInvokestatic(this.self, "reportLineCoverage", "(Ljava/lang/String;Ljava/lang/String;II)V");
     }
+
+    /**
+     * Return a List of Pc instances (a bytecode index and a line number) that is between startPc end end Pc
+     * @param codeAttribute
+     * @param startPc include
+     * @param endPc exclude
+     * @return
+     */
+    private List<LineNumberAttribute.Pc> getLineNumbersBetween(CodeAttribute codeAttribute, int startPc, int endPc) {
+        //Reload LineNumberAttribute, because CodeAttribute change at each computeMaxStack() method calls
+        LineNumberAttribute lineNumberAttribute = (LineNumberAttribute) codeAttribute.getAttribute(LineNumberAttribute.tag);
+
+        List<LineNumberAttribute.Pc> opcodesIndexes = new ArrayList<>();
+        List<Integer> coveredLines = new ArrayList<>();
+
+        int startLine = lineNumberAttribute.toLineNumber(startPc);
+        int endLine = lineNumberAttribute.toLineNumber(endPc - 1);
+
+        //Compute list of lines that is covered by array of bytecode between index in parameter
+        for(int i = 0 ; i < lineNumberAttribute.tableLength() ; i++) {
+
+            if(lineNumberAttribute.lineNumber(i) > endLine)
+                break;
+
+            if(lineNumberAttribute.lineNumber(i) >= startLine) {
+                coveredLines.add(lineNumberAttribute.lineNumber(i));
+            }
+        }
+
+        //Retrieve appropriate bytecode index of each source code lines computed precedently
+        for(int i = 0 ; i < coveredLines.size(); i++) {
+            opcodesIndexes.add(lineNumberAttribute.toNearPc(coveredLines.get(i)));
+        }
+
+
+        //override first item in resulting array because the startPc doesn't match in all case the start of a source code line.
+        LineNumberAttribute.Pc pc = new LineNumberAttribute.Pc();
+        pc.index = startPc; pc.line = startLine;
+        opcodesIndexes.set(0, pc);
+
+        return opcodesIndexes;
+    }
+
     /**
      * This Method is executed by the input project to record branch coverage datas.
      * @param classname
@@ -152,7 +198,7 @@ public abstract class BehaviorInstrumenter implements Instrumenter {
      * @param blockIndex
      * @param lineNumber
      */
-    public static void reportBranchCoverage(String classname, String methodName, int blockIndex, int lineNumber) {
+    public static void reportLineCoverage(String classname, String methodName, int blockIndex, int lineNumber) {
         AnalysisContext.reportBranchCoverage(classname, methodName, blockIndex, lineNumber);
     }
 }
