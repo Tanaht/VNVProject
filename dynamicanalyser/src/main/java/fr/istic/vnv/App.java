@@ -109,7 +109,7 @@ public class App {
                             } catch (Exception e) {
                                 log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
 
-                                if(log.isTraceEnabled())
+//                                if(log.isTraceEnabled())
                                     e.printStackTrace();
                             }
 
