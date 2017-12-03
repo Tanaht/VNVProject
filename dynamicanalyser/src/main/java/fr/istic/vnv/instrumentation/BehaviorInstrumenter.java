@@ -57,6 +57,8 @@ public abstract class BehaviorInstrumenter implements Instrumenter {
         } catch (BadBytecode badBytecode) {
             log.error("Unable to perform branch coverage instrumentation {}, cause {}", this.ctBehavior.getLongName(), badBytecode.getMessage());
 
+
+
             if(log.isTraceEnabled())
                 badBytecode.printStackTrace();
         }
@@ -191,11 +193,12 @@ public abstract class BehaviorInstrumenter implements Instrumenter {
             opcodesIndexes.add(lineNumberAttribute.toNearPc(coveredLines.get(i)));
         }
 
-
-        //override first item in resulting array because the startPc doesn't match in all case the start of a source code line.
-        LineNumberAttribute.Pc pc = new LineNumberAttribute.Pc();
-        pc.index = startPc; pc.line = startLine;
-        opcodesIndexes.set(0, pc);
+        if(opcodesIndexes.size() > 0) {
+            //override first item in resulting array because the startPc doesn't match in all case the start of a source code line.
+            LineNumberAttribute.Pc pc = new LineNumberAttribute.Pc();
+            pc.index = startPc; pc.line = startLine;
+            opcodesIndexes.set(0, pc);
+        }
 
         return opcodesIndexes;
     }
