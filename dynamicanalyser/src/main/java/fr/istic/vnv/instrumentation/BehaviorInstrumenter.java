@@ -128,6 +128,15 @@ public abstract class BehaviorInstrumenter implements Instrumenter {
                 bytecode = new Bytecode(codeAttribute.getConstPool());
                 insertLineCoverageCallback(bytecode, block.index(), pcs.get(i).line);
                 iterator.insertAt(pcs.get(i).index, bytecode.get());
+
+//              FIXME: Refactoring this little part of code, right now it's ugly.
+                codeAttribute.computeMaxStack();
+                iterator = codeAttribute.iterator();
+                flow = new ControlFlow(this.getCtBehavior().getDeclaringClass(), this.getCtBehavior().getMethodInfo());
+                blocks = flow.basicBlocks();
+                block = blocks[index-1];
+                pcs = getLineNumbersBetween(codeAttribute, block.position(), block.position() + block.length());
+
             }
 
         }
