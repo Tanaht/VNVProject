@@ -60,14 +60,15 @@ public class App {
 
             testSuites = fileStream.filter(file -> !file.getName().contains("$")).collect(Collectors.toCollection(ArrayList::new));
 
-            log.info("Found {} test suites to run", testSuites.size());
+            log.debug("Found {} test suites to run", testSuites.size());
             pool = ClassPool.getDefault();
 
             try {
                 pool.appendClassPath(classesFolder.getPath());
                 pool.appendClassPath(testClassesFolder.getPath());
             } catch (NotFoundException e) {
-                e.printStackTrace();
+                if(log.isDebugEnabled())
+                    e.printStackTrace();
             }
 
             Loader loader = new Loader(classLoader, pool);
@@ -83,8 +84,7 @@ public class App {
             try {
                 loader.addTranslator(pool, new Translator() {
                     @Override
-                    public void start(ClassPool pool) throws NotFoundException, CannotCompileException {
-                    }
+                    public void start(ClassPool pool) throws NotFoundException, CannotCompileException {}
 
                     @Override
                     public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
@@ -129,7 +129,7 @@ public class App {
             }
 
 
-
+            int succeed = 0;
             for (File testSuite : testSuites) {
                 ClassFile classFile = new ClassFile(new DataInputStream(new FileInputStream(testSuite.getAbsolutePath())));
 
@@ -137,8 +137,8 @@ public class App {
                     log.trace("Abstract Test Class found: {}, it will be ignored", classFile.getName());
                     continue;
                 }
-
-                log.info("Run TestSuite: {}", classFile.getName());
+                
+                log.trace("Run TestSuite: {}", classFile.getName());
 
                 Result result = JUnitCore.runClasses(loader.loadClass(classFile.getName()));
 
@@ -149,9 +149,12 @@ public class App {
                         log.warn("Test Failed for: {}", failure.toString());
                     }
                 } else {
-                    log.info("All Test Succeed");
+                    succeed++;
+                    log.trace("All test in {}, was executed with success.", testSuite.getName());
                 }
             }
+
+            log.info("{} TestSuites out of {} was passed successfully", succeed, testSuites.size());
 
             ReportGenerator reportGenerator = ReportGeneratorFactory.getTextReportGenerator();
 
