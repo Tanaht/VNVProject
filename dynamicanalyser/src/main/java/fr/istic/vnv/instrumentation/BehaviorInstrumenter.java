@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * A CtBehavior object is either a CtMethod or CtConstructor object.
  */
-public abstract class BehaviorInstrumenter implements Instrumenter {
+public class BehaviorInstrumenter implements Instrumenter {
 
     private static Logger log = LoggerFactory.getLogger(BehaviorInstrumenter.class);
     private CtBehavior ctBehavior;
@@ -59,7 +59,7 @@ public abstract class BehaviorInstrumenter implements Instrumenter {
 
 
 
-            if(log.isTraceEnabled())
+            if(log.isDebugEnabled())
                 badBytecode.printStackTrace();
         }
 
@@ -68,6 +68,9 @@ public abstract class BehaviorInstrumenter implements Instrumenter {
             traceExecutionInstrumentation();
         } catch (CannotCompileException e) {
             log.error("Unable to perform trace execution instrumentation {}, cause {}", this.ctBehavior.getLongName(), e.getReason());
+
+            if(log.isDebugEnabled())
+                e.printStackTrace();
         }
     }
 

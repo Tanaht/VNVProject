@@ -1,9 +1,7 @@
 package fr.istic.vnv.instrumentation;
 
+import javassist.CtBehavior;
 import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import javassist.bytecode.Descriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,11 +30,8 @@ public class ClassInstrumenter implements Instrumenter {
 
         this.behaviorInstrumenters = new ArrayList<>();
 
-        for(CtConstructor ctConstructor : this.ctClass.getDeclaredConstructors())
-            this.behaviorInstrumenters.add(new ConstructorInstrumenter(ctConstructor, type));
-
-        for(CtMethod ctMethod: this.ctClass.getDeclaredMethods())
-            this.behaviorInstrumenters.add(new MethodInstrumenter(ctMethod, type));
+        for(CtBehavior ctBehavior: this.ctClass.getDeclaredBehaviors())
+            this.behaviorInstrumenters.add(new BehaviorInstrumenter(ctBehavior, type));
     }
 
     public void instrument() {

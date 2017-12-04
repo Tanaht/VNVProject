@@ -109,18 +109,23 @@ public class App {
                             } catch (Exception e) {
                                 log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
 
-//                                if(log.isTraceEnabled())
+                                if(log.isDebugEnabled())
                                     e.printStackTrace();
                             }
 
                         } catch (IOException e) {
                             log.error("Unable to define if {} is in {} or not", classLocationPath, testClassesFolder.getPath());
-                            e.printStackTrace();
+
+                            if(log.isDebugEnabled())
+                                e.printStackTrace();
                         }
                     }
                 });
             } catch (NotFoundException | CannotCompileException e) {
                 log.error("Unable to instrument some method due to: {}", e.getMessage());
+
+                if(log.isDebugEnabled())
+                    e.printStackTrace();
             }
 
 
@@ -155,6 +160,9 @@ public class App {
         } catch (ClassNotFoundException | IOException e) {
             log.warn("Exception {}", e.getMessage());
             log.error("An exception occured during analyses, please check git issues and create one if there is none of that kind at http://www.github.com/tanaht/VNVProject");
+
+            if(log.isDebugEnabled())
+                e.printStackTrace();
         }
 
     }

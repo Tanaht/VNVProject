@@ -1,6 +1,5 @@
 package fr.istic.vnv.analysis;
 
-import fr.istic.vnv.instrumentation.MethodInstrumenter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
