@@ -30,6 +30,17 @@ public class App {
     public static ClassPool pool;
 
     public static void main(String[] args) {
+
+        try {
+            System.setOut(new PrintStream(new File("out.txt")));
+            System.setErr(new PrintStream(new File("err.txt")));
+        } catch (FileNotFoundException e) {
+            log.error("Impossible to redirect standards output into out.txt and err.txt");
+            if(log.isDebugEnabled())
+                e.printStackTrace();
+            return;
+        }
+
         if (args.length != 1) {
             log.error("Please provide path to a maven project in argument to this program.");
             return;
@@ -62,6 +73,7 @@ public class App {
 
             log.debug("Found {} test suites to run", testSuites.size());
             pool = ClassPool.getDefault();
+            pool.importPackage("java.io");
 
             try {
                 pool.appendClassPath(classesFolder.getPath());
@@ -92,7 +104,6 @@ public class App {
 
                         try{
                             String testFolderPath = testClassesFolder.getCanonicalPath().replace("\\", "/");
-
                             if(classLocationPath.contains(testFolderPath)) {
                                 // TODO: Here it is a test Class that is being loaded,
                                 // so perform appropriate bytecode manipulation if needed
@@ -137,9 +148,8 @@ public class App {
                     log.trace("Abstract Test Class found: {}, it will be ignored", classFile.getName());
                     continue;
                 }
-                
-                log.trace("Run TestSuite: {}", classFile.getName());
 
+                log.trace("Run TestSuite: {}", classFile.getName());
                 Result result = JUnitCore.runClasses(loader.loadClass(classFile.getName()));
 
                 if (!result.wasSuccessful()) {
