@@ -2,7 +2,10 @@ package fr.istic.vnv.instrumentation;
 
 import fr.istic.vnv.App;
 import fr.istic.vnv.analysis.AnalysisContext;
-import javassist.*;
+import javassist.CannotCompileException;
+import javassist.CtBehavior;
+import javassist.CtClass;
+import javassist.NotFoundException;
 import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
 import javassist.tools.Callback;
@@ -36,6 +39,15 @@ public class BehaviorInstrumenter implements Instrumenter {
 
     public CtBehavior getCtBehavior() {
         return ctBehavior;
+    }
+
+    /**
+     * Return Basic Block list of CtBehavior
+     * @return
+     * @throws BadBytecode
+     */
+    private ControlFlow.Block[] getBlocks() throws BadBytecode {
+        return new ControlFlow(this.ctBehavior.getDeclaringClass(), this.ctBehavior.getMethodInfo()).basicBlocks();
     }
 
     public void instrument() {
@@ -109,41 +121,43 @@ public class BehaviorInstrumenter implements Instrumenter {
     }
 
     protected void lineCoverageInstrumentation() throws BadBytecode {
+        CodeAttribute codeAttribute = this.ctBehavior.getMethodInfo().getCodeAttribute();
 
-        CodeAttribute codeAttribute = this.getCtBehavior().getMethodInfo().getCodeAttribute();
-        ControlFlow flow = new ControlFlow(this.getCtBehavior().getDeclaringClass(), this.getCtBehavior().getMethodInfo());
-        ControlFlow.Block[] blocks = flow.basicBlocks();
+        int current = 0;
+        while(current < getBlocks().length) {
+
+            instrumentBlockIndexedAt(codeAttribute, getBlocks()[current++].index());
+        }
+
+    }
+
+    private void instrumentBlockIndexedAt(CodeAttribute codeAttribute, int blockIndex) throws BadBytecode {
+        ControlFlow.Block[] blocks = getBlocks();
         Bytecode bytecode = null;
 
-        int index = 0;
+        if(blocks.length < blockIndex) {
+            throw new ArrayIndexOutOfBoundsException("Blocks List doesn't have index " + blockIndex);
+        }
 
-        while(index < blocks.length) {
-            //Redefine flow, blocks and iterator because when manipulating bytecode in a loop it will fail.
-            flow = new ControlFlow(this.getCtBehavior().getDeclaringClass(), this.getCtBehavior().getMethodInfo());
-            blocks = flow.basicBlocks();
-            ControlFlow.Block block = blocks[index++];
+        ControlFlow.Block block = blocks[blockIndex];
 
-            CodeIterator iterator = codeAttribute.iterator();
+        if(block.index() != blockIndex) {
+            throw new ArrayIndexOutOfBoundsException("retrieved block instance " + block.index() + " doesn't have correct index " + blockIndex);
+        }
 
-            //Retrieve list of lines inside this block and matching bytecode index.
-            List<LineNumberAttribute.Pc> pcs = getLineNumbersBetween(codeAttribute, block.position(), block.position() + block.length());
+        CodeIterator iterator = codeAttribute.iterator();
+        List<LineNumberAttribute.Pc> pcs = getLineNumbersBetween(codeAttribute, block.position(), block.position() + block.length());
 
-            for(int i = pcs.size() -1 ; i >= 0 ; i--) {
-//                log.trace("{} block {}, pc line {}, pc index {}", this.getCtBehavior().getLongName(), block.index(), pcs.get(i).line, pcs.get(i).index);
-                bytecode = new Bytecode(codeAttribute.getConstPool());
-                insertLineCoverageCallback(bytecode, block.index(), pcs.get(i).line);
-                iterator.insertAt(pcs.get(i).index, bytecode.get());
+        for(int i = pcs.size() -1 ; i >= 0 ; i--) {
+            log.trace("{} block {}, pc line {}, pc index {}", this.ctBehavior.getLongName(), block.index(), pcs.get(i).line, pcs.get(i).index);
+            bytecode = new Bytecode(codeAttribute.getConstPool());
+            insertLineCoverageCallback(bytecode, block.index(), pcs.get(i).line);
+            iterator.insertAt(pcs.get(i).index, bytecode.get());
 
-//              FIXME: Refactoring this little part of code, right now it's ugly.
-                codeAttribute.computeMaxStack();
-                iterator = codeAttribute.iterator();
-                flow = new ControlFlow(this.getCtBehavior().getDeclaringClass(), this.getCtBehavior().getMethodInfo());
-                blocks = flow.basicBlocks();
-                block = blocks[index-1];
-                pcs = getLineNumbersBetween(codeAttribute, block.position(), block.position() + block.length());
-
-            }
-
+            // there is a way to optimize this ?
+            codeAttribute.computeMaxStack();
+            block = getBlocks()[blockIndex];
+            pcs = getLineNumbersBetween(codeAttribute, block.position(), block.position() + block.length());
         }
     }
 
