@@ -69,7 +69,7 @@ public class App {
 
             Stream<File> fileStream = testSuites.stream();
 
-            testSuites = fileStream.filter(file -> !file.getName().contains("$")).collect(Collectors.toCollection(ArrayList::new));
+            testSuites = fileStream.filter(file -> !file.getName().contains("$")).filter(file -> file.getName().endsWith("Test.class")).collect(Collectors.toCollection(ArrayList::new));
 
             log.debug("Found {} test suites to run", testSuites.size());
             pool = ClassPool.getDefault();
