@@ -15,3 +15,7 @@ hs_err_pid*
 
 vnvproject\.iml
 target/
+
+*.iml
+
+VNVReport\.txt

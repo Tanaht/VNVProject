@@ -1,5 +1,8 @@
 package fr.istic.vnv;
 
+import fr.istic.vnv.Report.ReportGenerator;
+import fr.istic.vnv.Report.ReportGeneratorFactory;
+import fr.istic.vnv.instrumentation.ClassInstrumenter;
 import javassist.*;
 import javassist.bytecode.ClassFile;
 import org.apache.commons.io.FileUtils;
@@ -10,10 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  *
@@ -22,7 +27,20 @@ import java.util.Collection;
 public class App {
     private static Logger log = LoggerFactory.getLogger(App.class);
 
+    public static ClassPool pool;
+
     public static void main(String[] args) {
+
+        try {
+            System.setOut(new PrintStream(new File("out.txt")));
+            System.setErr(new PrintStream(new File("err.txt")));
+        } catch (FileNotFoundException e) {
+            log.error("Impossible to redirect standards output into out.txt and err.txt");
+            if(log.isDebugEnabled())
+                e.printStackTrace();
+            return;
+        }
+
         if (args.length != 1) {
             log.error("Please provide path to a maven project in argument to this program.");
             return;
@@ -35,7 +53,7 @@ public class App {
             return;
         }
 
-        log.info("Start Dynamic Analysis of {}", mavenProject.getAbsolutePath());
+        log.info("Start Dynamic analysis of {}", mavenProject.getAbsolutePath());
 
         File classesFolder = FileUtils.getFile(mavenProject, "target/classes");
         File testClassesFolder = FileUtils.getFile(mavenProject, "target/test-classes");
@@ -47,112 +65,120 @@ public class App {
 
         try {
             URLClassLoader classLoader = new URLClassLoader(new URL[]{testClassesFolder.toURI().toURL(), classesFolder.toURI().toURL()});
-
-//            Thread.currentThread().setContextClassLoader(classLoader);
             Collection<File> testSuites = FileUtils.listFiles(testClassesFolder, new String[]{"class"}, true);
 
-            log.info("Found {} test suites to run", testSuites.size());
-            ClassPool pool = ClassPool.getDefault();
+            Stream<File> fileStream = testSuites.stream();
+
+            testSuites = fileStream.filter(file -> !file.getName().contains("$")).filter(file -> file.getName().endsWith("Test.class")).collect(Collectors.toCollection(ArrayList::new));
+
+            log.debug("Found {} test suites to run", testSuites.size());
+            pool = ClassPool.getDefault();
+            pool.importPackage("java.io");
 
             try {
                 pool.appendClassPath(classesFolder.getPath());
                 pool.appendClassPath(testClassesFolder.getPath());
             } catch (NotFoundException e) {
-                e.printStackTrace();
+                if(log.isDebugEnabled())
+                    e.printStackTrace();
             }
 
             Loader loader = new Loader(classLoader, pool);
+
+            /*
+             * Do not instrument the folowing packages:
+             * (by default Javassist do not instrument java.lang.* and other native methods)
+             */
             loader.delegateLoadingOf("org.junit.");
+            loader.delegateLoadingOf("javassist.");
+            loader.delegateLoadingOf("fr.istic.vnv.");
+
             try {
                 loader.addTranslator(pool, new Translator() {
                     @Override
-                    public void start(ClassPool pool) throws NotFoundException, CannotCompileException {
-                    }
+                    public void start(ClassPool pool) throws NotFoundException, CannotCompileException {}
 
                     @Override
                     public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
-                        log.debug("[JAVASSIST]  onLoad {}", classname);
+                        String classLocationPath = pool.find(classname).getPath().replace("\\", "/");
+
+                        try{
+                            String testFolderPath = testClassesFolder.getCanonicalPath().replace("\\", "/");
+                            if(classLocationPath.contains(testFolderPath)) {
+                                // TODO: Here it is a test Class that is being loaded,
+                                // so perform appropriate bytecode manipulation if needed
+                                // (like if we want to know what unit test has called what related project method, when we compute execution trace).
+                                return;
+                            }
+
+                            log.trace("[JAVASSIST] {} {}", classLocationPath, classname);
+
+                            ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
+
+                            try{
+                                instrumenter.instrument();
+                            } catch (Exception e) {
+                                log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
+
+                                if(log.isDebugEnabled())
+                                    e.printStackTrace();
+                            }
+
+                        } catch (IOException e) {
+                            log.error("Unable to define if {} is in {} or not", classLocationPath, testClassesFolder.getPath());
+
+                            if(log.isDebugEnabled())
+                                e.printStackTrace();
+                        }
                     }
                 });
-            } catch (NotFoundException e) {
-                e.printStackTrace();
-            } catch (CannotCompileException e) {
-                e.printStackTrace();
+            } catch (NotFoundException | CannotCompileException e) {
+                log.error("Unable to instrument some method due to: {}", e.getMessage());
+
+                if(log.isDebugEnabled())
+                    e.printStackTrace();
             }
 
 
-
+            int succeed = 0;
             for (File testSuite : testSuites) {
                 ClassFile classFile = new ClassFile(new DataInputStream(new FileInputStream(testSuite.getAbsolutePath())));
-                log.debug("TestSuite ClassName: {}", classFile.getName());
-                loader.delegateLoadingOf("org.junit.");
+
+                if(classFile.isAbstract()) {
+                    log.trace("Abstract Test Class found: {}, it will be ignored", classFile.getName());
+                    continue;
+                }
+
+                log.trace("Run TestSuite: {}", classFile.getName());
                 Result result = JUnitCore.runClasses(loader.loadClass(classFile.getName()));
 
                 if (!result.wasSuccessful()) {
-                    log.warn("{} Test Failed out of {}", result.getFailureCount(), result.getRunCount());
+                    log.error("{} Test Failed out of {} on {}", result.getFailureCount(), result.getRunCount(), classFile.getName());
 
                     for(Failure failure : result.getFailures()) {
-                        log.warn("Failed for: {} with trace: {}", failure.toString(), failure.getTrace());
+                        log.warn("Test Failed for: {}", failure.toString());
                     }
                 } else {
-                    log.info("All Test Succeed");
+                    succeed++;
+                    log.trace("All test in {}, was executed with success.", testSuite.getName());
                 }
             }
 
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            log.info("{} TestSuites out of {} was passed successfully", succeed, testSuites.size());
+
+            ReportGenerator reportGenerator = ReportGeneratorFactory.getTextReportGenerator();
+
+            PrintStream stream = new PrintStream(new File("VNVReport.txt"));
+            reportGenerator.save(stream);
+        } catch (ClassNotFoundException | IOException e) {
+            log.warn("Exception {}", e.getMessage());
+            log.error("An exception occured during analyses, please check git issues and create one if there is none of that kind at http://www.github.com/tanaht/VNVProject");
+
+            if(log.isDebugEnabled())
+                e.printStackTrace();
         }
 
     }
-
-//    public static void main( String[] args )
-//    {
-//        try {
-//            ClassPool pool = ClassPool.getDefault();
-//
-//            MetadataClassGenerator generator = new MetadataClassGenerator(pool);
-//
-//            //CtClass singleton = generator.generateSingleton();
-//
-//            Loader loader = new Loader(pool);
-//            Translator logger = new Translator() {
-//                public void start(ClassPool classPool) throws NotFoundException, CannotCompileException {
-//                    System.out.println("Starting");
-//                }
-//
-//                public void onLoad(ClassPool classPool, String s) throws NotFoundException, CannotCompileException {
-//                    log.info(s);
-//
-//                    ClassHandler handler = new BlockClassHandler(classPool.get(s));
-//                    handler.handle();
-//                }
-//            };
-//
-//            loader.addTranslator(pool, logger);
-//
-//            //singleton.writeFile("input/target/classes");
-//            pool.appendClassPath("input/target/classes");
-//
-//
-//            loader.run("m2.vv.tutorials.QuotesApp", args);
-//        }
-//
-//        catch(VerifyError err) {
-//            log.error(err.getMessage());
-//        }
-//
-//        catch(Throwable exc) {
-//            System.out.println("An error occured");
-//            System.out.println(exc.getMessage());
-//            exc.printStackTrace();
-//        }
-//    }
 
     public static String helloWorld() {
         return "Hello World";
