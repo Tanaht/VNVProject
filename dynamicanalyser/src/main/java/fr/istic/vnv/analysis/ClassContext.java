@@ -4,10 +4,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ *
+ */
 public class ClassContext {
     private String longName;
     private Map<String, BehaviorContext> behaviorContexts;
 
+    /**
+     *
+     * @param longName
+     */
     public ClassContext(String longName) {
         this.longName = longName;
         this.behaviorContexts = new HashMap<>();
