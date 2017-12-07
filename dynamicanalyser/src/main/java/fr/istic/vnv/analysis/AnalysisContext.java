@@ -6,11 +6,18 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+/**
+ *
+ */
 public class AnalysisContext {
     private static Logger log = LoggerFactory.getLogger(AnalysisContext.class);
 
     private static AnalysisContext analysisContext;
 
+    /**
+     *
+     * @return
+     */
     public static AnalysisContext getAnalysisContext() {
         if(analysisContext == null)
             analysisContext = new AnalysisContext();
@@ -38,6 +45,13 @@ public class AnalysisContext {
         log.trace("At {} {} Increment counter of block {} at line {}", className, methodName, block, lineNumber);
     }
 
+    /**
+     *
+     * @param className
+     * @param methodName
+     * @param block
+     * @param lineNumber
+     */
     public static void createBranchCoverage(String className, String methodName, int block, int lineNumber) {
         AnalysisContext context = getAnalysisContext();
 
@@ -58,10 +72,18 @@ public class AnalysisContext {
         this.classContexts = new HashMap<>();
     }
 
+    /**
+     *
+     * @param trace
+     */
     public void addExecutionTrace(String trace) {
         this.executionTrace.add(trace);
     }
 
+    /**
+     *
+     * @return
+     */
     public List<String> getExecutionTrace() {
         return this.executionTrace;
     }
@@ -83,6 +105,10 @@ public class AnalysisContext {
         return classContext;
     }
 
+    /**
+     * 
+     * @return
+     */
     public Map<String, ClassContext> getClassContexts() {
         return this.classContexts;
     }
