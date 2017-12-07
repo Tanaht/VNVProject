@@ -6,20 +6,35 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ *
+ */
 public class LineCounter {
     private static Logger log = LoggerFactory.getLogger(LineCounter.class);
     private int lineNumber;
     private Map<Integer, Integer> blocksCounters;
 
+    /**
+     *
+     * @param lineNumber
+     */
     public LineCounter(int lineNumber) {
         this.lineNumber = lineNumber;
         this.blocksCounters = new HashMap<>();
     }
 
+    /**
+     *
+     * @param blockId
+     */
     public void createCounter(int blockId) {
         this.blocksCounters.put(blockId, 0);
     }
 
+    /**
+     *
+     * @param blockId
+     */
     protected void increment(int blockId) {
         if(this.blocksCounters.containsKey(blockId)) {
             this.blocksCounters.put(blockId, this.blocksCounters.get(blockId)+1);
