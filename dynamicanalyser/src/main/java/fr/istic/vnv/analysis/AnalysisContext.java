@@ -91,8 +91,8 @@ public class AnalysisContext {
 
     /**
      * Retrieve ClassContext, if not found, create it.
-     * @param classname
-     * @return
+     * @param classname The name of the class you want to get the ClassContext
+     * @return The ClassContext, or create it if not exist
      */
     public ClassContext getClassContext(String classname) {
         Optional<ClassContext> classContextOptional = Optional.ofNullable(this.classContexts.get(classname));
