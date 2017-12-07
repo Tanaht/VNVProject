@@ -25,6 +25,8 @@ import java.util.stream.Stream;
  *
  */
 public class App {
+    public static final PrintStream sysout = new PrintStream(new FileOutputStream(FileDescriptor.err));
+
     private static Logger log = LoggerFactory.getLogger(App.class);
 
     public static ClassPool pool;
@@ -37,7 +39,7 @@ public class App {
         } catch (FileNotFoundException e) {
             log.error("Impossible to redirect standards output into out.txt and err.txt");
             if(log.isDebugEnabled())
-                e.printStackTrace();
+                e.printStackTrace(sysout);
             return;
         }
 
@@ -80,7 +82,7 @@ public class App {
                 pool.appendClassPath(testClassesFolder.getPath());
             } catch (NotFoundException e) {
                 if(log.isDebugEnabled())
-                    e.printStackTrace();
+                    e.printStackTrace(sysout);
             }
 
             Loader loader = new Loader(classLoader, pool);
@@ -121,14 +123,14 @@ public class App {
                                 log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
 
                                 if(log.isDebugEnabled())
-                                    e.printStackTrace();
+                                    e.printStackTrace(sysout);
                             }
 
                         } catch (IOException e) {
                             log.error("Unable to define if {} is in {} or not", classLocationPath, testClassesFolder.getPath());
 
                             if(log.isDebugEnabled())
-                                e.printStackTrace();
+                                e.printStackTrace(sysout);
                         }
                     }
                 });
@@ -136,7 +138,7 @@ public class App {
                 log.error("Unable to instrument some method due to: {}", e.getMessage());
 
                 if(log.isDebugEnabled())
-                    e.printStackTrace();
+                    e.printStackTrace(sysout);
             }
 
 
@@ -157,6 +159,8 @@ public class App {
 
                     for(Failure failure : result.getFailures()) {
                         log.warn("Test Failed for: {}", failure.toString());
+                        if(log.isDebugEnabled())
+                            failure.getException().printStackTrace(sysout);
                     }
                 } else {
                     succeed++;
@@ -175,7 +179,7 @@ public class App {
             log.error("An exception occured during analyses, please check git issues and create one if there is none of that kind at http://www.github.com/tanaht/VNVProject");
 
             if(log.isDebugEnabled())
-                e.printStackTrace();
+                e.printStackTrace(sysout);
         }
 
     }

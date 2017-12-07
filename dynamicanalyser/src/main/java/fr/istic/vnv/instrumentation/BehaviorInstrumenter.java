@@ -72,7 +72,7 @@ public class BehaviorInstrumenter implements Instrumenter {
 
 
             if(log.isDebugEnabled())
-                badBytecode.printStackTrace();
+                badBytecode.printStackTrace(App.sysout);
         }
 
         try {
@@ -82,7 +82,7 @@ public class BehaviorInstrumenter implements Instrumenter {
             log.error("Unable to perform trace execution instrumentation {}, cause {}", this.ctBehavior.getLongName(), e.getReason());
 
             if(log.isDebugEnabled())
-                e.printStackTrace();
+                e.printStackTrace(App.sysout);
         }
     }
 
