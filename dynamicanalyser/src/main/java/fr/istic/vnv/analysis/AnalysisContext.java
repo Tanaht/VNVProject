@@ -106,8 +106,8 @@ public class AnalysisContext {
     }
 
     /**
-     *
-     * @return
+     * Return a map where a name class is associate with it context
+     * @return The map where each name class is associate with it classContext
      */
     public Map<String, ClassContext> getClassContexts() {
         return this.classContexts;
