@@ -73,8 +73,8 @@ public class AnalysisContext {
     }
 
     /**
-     *
-     * @param trace
+     * Add a trace when a method is executed
+     * @param trace A String who describe the current method executed
      */
     public void addExecutionTrace(String trace) {
         this.executionTrace.add(trace);
