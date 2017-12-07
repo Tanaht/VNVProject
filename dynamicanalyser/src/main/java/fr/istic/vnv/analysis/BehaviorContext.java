@@ -3,16 +3,28 @@ package fr.istic.vnv.analysis;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ *
+ */
 public class BehaviorContext {
 
     private String name;
     private Map<Integer, LineCounter> lineCounters;
 
+    /**
+     *
+     * @param name
+     */
     public BehaviorContext(String name) {
         this.name = name;
         this.lineCounters = new HashMap<>();
     }
 
+    /**
+     *
+     * @param lineNumber
+     * @return
+     */
     public LineCounter getLineCounter(int lineNumber) {
         if(this.lineCounters.containsKey(lineNumber))
             return this.lineCounters.get(lineNumber);

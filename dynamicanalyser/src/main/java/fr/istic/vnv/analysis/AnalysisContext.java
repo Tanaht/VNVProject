@@ -106,7 +106,7 @@ public class AnalysisContext {
     }
 
     /**
-     * 
+     *
      * @return
      */
     public Map<String, ClassContext> getClassContexts() {
