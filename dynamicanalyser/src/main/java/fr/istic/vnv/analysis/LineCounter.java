@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- *
+ * Class representation of the number of time a line is executed. A line can contains more than 1 block
  */
 public class LineCounter {
     private static Logger log = LoggerFactory.getLogger(LineCounter.class);
@@ -16,7 +16,7 @@ public class LineCounter {
 
     /**
      *
-     * @param lineNumber
+     * @param lineNumber The line number where the block start
      */
     public LineCounter(int lineNumber) {
         this.lineNumber = lineNumber;
@@ -24,8 +24,8 @@ public class LineCounter {
     }
 
     /**
-     *
-     * @param blockId
+     * Create a new block for where it start at line number lineNumber
+     * @param blockId The id of the block you want to create a counter
      */
     public void createCounter(int blockId) {
         this.blocksCounters.put(blockId, 0);
