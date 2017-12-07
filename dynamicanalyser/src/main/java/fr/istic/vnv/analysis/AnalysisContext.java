@@ -15,8 +15,8 @@ public class AnalysisContext {
     private static AnalysisContext analysisContext;
 
     /**
-     *
-     * @return
+     * Get the only instance of AnalysisContext possible
+     * @return Instance of AnalysisContext
      */
     public static AnalysisContext getAnalysisContext() {
         if(analysisContext == null)
