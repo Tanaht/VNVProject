@@ -46,11 +46,11 @@ public class AnalysisContext {
     }
 
     /**
-     *
-     * @param className
-     * @param methodName
-     * @param block
-     * @param lineNumber
+     * creating a counter for a method class in a specific block of the method
+     * @param className The name of the class where there is the method
+     * @param methodName The name of the method where you want to create a counter block
+     * @param block The number of the specific block where you want to associate a counter
+     * @param lineNumber The line number in the source code where the block start
      */
     public static void createBranchCoverage(String className, String methodName, int block, int lineNumber) {
         AnalysisContext context = getAnalysisContext();
