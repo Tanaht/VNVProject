@@ -81,8 +81,8 @@ public class AnalysisContext {
     }
 
     /**
-     *
-     * @return
+     * Return the trace of all method executed
+     * @return The trace of all method executed
      */
     public List<String> getExecutionTrace() {
         return this.executionTrace;
