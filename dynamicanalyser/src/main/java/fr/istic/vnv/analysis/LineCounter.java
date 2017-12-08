@@ -44,6 +44,24 @@ public class LineCounter {
         }
     }
 
+
+    /**
+     * only for test
+     * @return
+     */
+    protected int getLineNumber() {
+        return lineNumber;
+    }
+
+    /**
+     * only for test
+     * @return
+     */
+    protected Map<Integer, Integer> getBlocksCounters() {
+        return blocksCounters;
+    }
+
+
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
