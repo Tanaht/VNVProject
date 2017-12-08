@@ -34,6 +34,22 @@ public class BehaviorContext {
         return lineCounter;
     }
 
+    /**
+     * only for test
+     * @return
+     */
+    protected String getName() {
+        return name;
+    }
+    /**
+     * only for test
+     * @return
+     */
+    protected Map<Integer, LineCounter> getLineCounters() {
+        return lineCounters;
+    }
+
+
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
