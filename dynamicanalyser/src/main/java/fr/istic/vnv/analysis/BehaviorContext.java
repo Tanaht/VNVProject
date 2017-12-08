@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- *
+ * Class representation to see what is it executed in a method.
  */
 public class BehaviorContext {
 
@@ -13,7 +13,7 @@ public class BehaviorContext {
 
     /**
      *
-     * @param name
+     * @param name The name of a method and the descriptor of the method.
      */
     public BehaviorContext(String name) {
         this.name = name;
@@ -21,9 +21,9 @@ public class BehaviorContext {
     }
 
     /**
-     *
-     * @param lineNumber
-     * @return
+     * Get the LineCounter of the lineNumber.
+     * @param lineNumber The lineNumber you want to get the LineCounter
+     * @return The line counter of the line lineNumber
      */
     public LineCounter getLineCounter(int lineNumber) {
         if(this.lineCounters.containsKey(lineNumber))

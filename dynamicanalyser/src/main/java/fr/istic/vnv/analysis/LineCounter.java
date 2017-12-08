@@ -7,7 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Class representation of the number of time a line is executed. A line can contains more than 1 block
+ * Class representation of the number of time a line is executed. A line can contains more than 1 block.
+ * If there are more than 1 block, the line is executed only if all block of the line is executed.
  */
 public class LineCounter {
     private static Logger log = LoggerFactory.getLogger(LineCounter.class);
@@ -15,7 +16,7 @@ public class LineCounter {
     private Map<Integer, Integer> blocksCounters;
 
     /**
-     *
+     * Representation of the line at line lineNumber
      * @param lineNumber The line number where the block start
      */
     public LineCounter(int lineNumber) {
@@ -32,8 +33,8 @@ public class LineCounter {
     }
 
     /**
-     *
-     * @param blockId
+     * Increment the counter to say the block of id blockId is executed 1 more time
+     * @param blockId The id of the block is executed
      */
     protected void increment(int blockId) {
         if(this.blocksCounters.containsKey(blockId)) {
