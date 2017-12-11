@@ -17,6 +17,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,15 +28,16 @@ import java.util.stream.Stream;
 public class App {
     public static final PrintStream sysout = new PrintStream(new FileOutputStream(FileDescriptor.err));
 
+    private static final String dependencyFolder = "target/vnv-dependencies/";
     private static Logger log = LoggerFactory.getLogger(App.class);
 
     public static ClassPool pool;
-
     public static void main(String[] args) {
-
         try {
-            System.setOut(new PrintStream(new File("out.txt")));
-            System.setErr(new PrintStream(new File("err.txt")));
+            if(log.isInfoEnabled() && !log.isDebugEnabled()) {//Redirect output only if info logging mode
+                System.setOut(new PrintStream(new File("out.txt")));
+                System.setErr(new PrintStream(new File("err.txt")));
+            }
         } catch (FileNotFoundException e) {
             log.error("Impossible to redirect standards output into out.txt and err.txt");
             if(log.isDebugEnabled())
@@ -55,6 +57,19 @@ public class App {
             return;
         }
 
+
+        try {
+            log.info("Generating Dependencies into {}...", FileUtils.getFile(mavenProject, dependencyFolder).getAbsolutePath());
+            Process generatingDependenciesProcess = Runtime.getRuntime().exec("mvn dependency:copy-dependencies -DoutputDirectory=" + dependencyFolder, null,  mavenProject);
+            generatingDependenciesProcess.waitFor();
+            log.info("...Done");
+        } catch (IOException | InterruptedException e) {
+            log.error(e.getMessage());
+
+            if(log.isDebugEnabled())
+                e.printStackTrace(sysout);
+        }
+
         log.info("Start Dynamic analysis of {}", mavenProject.getAbsolutePath());
 
         File classesFolder = FileUtils.getFile(mavenProject, "target/classes");
@@ -66,7 +81,21 @@ public class App {
         }
 
         try {
-            URLClassLoader classLoader = new URLClassLoader(new URL[]{testClassesFolder.toURI().toURL(), classesFolder.toURI().toURL()});
+
+            List<URL> classToLoad = new ArrayList<>();
+
+            classToLoad.add(testClassesFolder.toURI().toURL());
+            classToLoad.add(classesFolder.toURI().toURL());
+
+
+            for(File jarFile : FileUtils.listFiles(FileUtils.getFile(mavenProject, dependencyFolder), new String[]{"jar"}, true)) {
+                String urlPath = "jar:file:" + jarFile.getAbsolutePath() + "!/";
+                classToLoad.add(new URL(urlPath));
+                log.debug("Adding {} to ClassLoader", jarFile.getCanonicalPath());
+            }
+
+            URLClassLoader classLoader = URLClassLoader.newInstance(classToLoad.toArray(new URL[classToLoad.size()]));
+
             Collection<File> testSuites = FileUtils.listFiles(testClassesFolder, new String[]{"class"}, true);
 
             Stream<File> fileStream = testSuites.stream();
@@ -80,6 +109,10 @@ public class App {
             try {
                 pool.appendClassPath(classesFolder.getPath());
                 pool.appendClassPath(testClassesFolder.getPath());
+
+                for(File jarFile : FileUtils.listFiles(FileUtils.getFile(mavenProject, dependencyFolder), new String[]{"jar"}, true)) {
+                    pool.appendClassPath(jarFile.getAbsolutePath());
+                }
             } catch (NotFoundException e) {
                 if(log.isDebugEnabled())
                     e.printStackTrace(sysout);
@@ -105,6 +138,7 @@ public class App {
                         String classLocationPath = pool.find(classname).getPath().replace("\\", "/");
 
                         try{
+
                             String testFolderPath = testClassesFolder.getCanonicalPath().replace("\\", "/");
                             if(classLocationPath.contains(testFolderPath)) {
                                 // TODO: Here it is a test Class that is being loaded,
@@ -118,7 +152,7 @@ public class App {
                             ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
 
                             try{
-                                instrumenter.instrument();
+                                //instrumenter.instrument();
                             } catch (Exception e) {
                                 log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
 

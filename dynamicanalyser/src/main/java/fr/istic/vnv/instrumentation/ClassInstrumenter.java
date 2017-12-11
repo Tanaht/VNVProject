@@ -35,7 +35,7 @@ public class ClassInstrumenter implements Instrumenter {
     }
 
     public void instrument() {
-        log.trace("Instrument class {}", ctClass.getName());
+        log.debug("Instrument class {}", ctClass.getName());
         for(BehaviorInstrumenter behaviorInstrumenter : behaviorInstrumenters)
             behaviorInstrumenter.instrument();
     }

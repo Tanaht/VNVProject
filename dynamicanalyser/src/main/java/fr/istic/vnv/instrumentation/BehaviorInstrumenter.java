@@ -61,7 +61,7 @@ public class BehaviorInstrumenter implements Instrumenter {
             return;
         }
 
-        log.debug("Instrument class {}", ctBehavior.getLongName());
+        log.debug("Instrument method {}{}", ctBehavior.getName(), Descriptor.toString(ctBehavior.getSignature()));
 
         try {
             log.trace("Line Coverage Instrumentation of {}", ctBehavior.getLongName());
@@ -102,7 +102,8 @@ public class BehaviorInstrumenter implements Instrumenter {
                     if(object != null) {
 //                        TODO: When time comes generate a helper to pretty print method parameters to handle primitive type and other well known type (List, Map, String, int, double)
 //                        For Other object we will only print his hashcode.
-                        trace += object.toString().length() > 30 ? object.hashCode() : object.toString() + ", ";
+                        // FIXME: due to some circular reference, it's not a good thing to use object.toString methods
+                        trace += "null" + ", ";
                     } else
                         trace += "null, ";
                 }
