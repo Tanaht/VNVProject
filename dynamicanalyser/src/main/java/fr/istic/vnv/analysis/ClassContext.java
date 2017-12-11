@@ -36,6 +36,14 @@ public class ClassContext {
         return behaviorContext;
     }
 
+    /**
+     * only for test
+     * @return
+     */
+    protected Map<String, BehaviorContext> getBehaviorContexts() {
+        return behaviorContexts;
+    }
+
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();

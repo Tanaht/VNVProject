@@ -41,6 +41,7 @@ public class TestBehaviorContext {
 
     @Test
     void lineCounter_should_be_empty_after_getLineCounter_who_did_not_exist(){
+        assertThat(behaviorContext.getLineCounters().isEmpty(), is(equalTo(true)));
         LineCounter newLineCounter = behaviorContext.getLineCounter(anyInt());
         assertThat(newLineCounter.getBlocksCounters().isEmpty(),is(equalTo(true)));
     }
