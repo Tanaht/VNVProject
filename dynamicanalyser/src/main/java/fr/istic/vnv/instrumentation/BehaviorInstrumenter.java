@@ -8,7 +8,6 @@ import javassist.CtClass;
 import javassist.NotFoundException;
 import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
-import javassist.tools.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,34 +90,10 @@ public class BehaviorInstrumenter implements Instrumenter {
      * @throws CannotCompileException
      */
     private void traceExecutionInstrumentation() throws CannotCompileException {
-        ctBehavior.insertBefore(new Callback("$args") {
-            @Override
-            public void result(Object[] objects) {
-                Object[] args = (Object[]) objects[0];
-                String trace = "[START]" + ctBehavior.getDeclaringClass().getName() + '.' + ctBehavior.getName();
-
-                trace += "(";
-                for (Object object : args) {
-                    if(object != null) {
-//                        TODO: When time comes generate a helper to pretty print method parameters to handle primitive type and other well known type (List, Map, String, int, double)
-//                        For Other object we will only print his hashcode.
-                        // FIXME: due to some circular reference, it's not a good thing to use object.toString methods
-                        trace += "null" + ", ";
-                    } else
-                        trace += "null, ";
-                }
-                trace += ")";
-
-                AnalysisContext.getAnalysisContext().addExecutionTrace(trace);
-            }
-        }.sourceCode());
-
-        ctBehavior.insertAfter(new Callback("\"\"") {
-            @Override
-            public void result(Object[] objects) {
-                AnalysisContext.getAnalysisContext().addExecutionTrace("[END]");
-            }
-        }.sourceCode());
+        ctBehavior.getDeclaringClass().getClassPool().importPackage("fr.istic.vnv.analysis");
+        String beforeInstr = "[START]" + ctBehavior.getDeclaringClass().getName() + '.' + ctBehavior.getName();
+        ctBehavior.insertBefore("{ AnalysisContext.addStartExecutionTrace(\"" + beforeInstr + "\", $args); }");
+        ctBehavior.insertAfter("{ AnalysisContext.addEndExecutionTrace(); }");
     }
 
     protected void lineCoverageInstrumentation() throws BadBytecode {

@@ -1,6 +1,5 @@
 package fr.istic.vnv.analysis;
 
-import fr.istic.vnv.instrumentation.BehaviorInstrumenter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +18,7 @@ public class AnalysisContext {
     }
 
     /**
-     * Report A Branch Coverage Counter, a Branch Coverage counter is set on a method (or constructor)
+     * report A Branch Coverage Counter, a Branch Coverage counter is set on a method (or constructor)
      * and on a specific line number on a given block.
      * a block is a set of instruction that has no jump inside it (so it is executed with no loop).
      * But a block can jump to another block. So this is why we report Branch Coverage Counter based on blocks.
@@ -58,8 +57,20 @@ public class AnalysisContext {
         this.classContexts = new HashMap<>();
     }
 
-    public void addExecutionTrace(String trace) {
-        this.executionTrace.add(trace);
+    /**
+     * Called By Javassisted methods at starts of each of them.
+     * @param trace message to record
+     * @param args arguments list of javassisted method.
+     */
+    public static void addStartExecutionTrace(String trace, Object... args) {
+        getAnalysisContext().executionTrace.add(trace);
+    }
+
+    /**
+     * Called by Javassisted methods at ends of each of them.
+     */
+    public static void addEndExecutionTrace() {
+        getAnalysisContext().executionTrace.add("[END]");
     }
 
     public List<String> getExecutionTrace() {

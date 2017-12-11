@@ -1,4 +1,4 @@
-package fr.istic.vnv.Report;
+package fr.istic.vnv.report;
 
 import fr.istic.vnv.analysis.AnalysisContext;
 

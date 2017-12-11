@@ -1,14 +1,16 @@
 package fr.istic.vnv;
 
-import fr.istic.vnv.Report.ReportGenerator;
-import fr.istic.vnv.Report.ReportGeneratorFactory;
+import fr.istic.vnv.report.ReportGenerator;
+import fr.istic.vnv.report.ReportGeneratorFactory;
 import fr.istic.vnv.instrumentation.ClassInstrumenter;
+import fr.istic.vnv.utils.ExtendedTextListener;
 import javassist.*;
 import javassist.bytecode.ClassFile;
 import org.apache.commons.io.FileUtils;
+import org.junit.internal.builders.AllDefaultPossibilitiesBuilder;
 import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
+import org.junit.runner.notification.RunNotifier;
+import org.junit.runners.Suite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +35,7 @@ public class App {
 
     public static ClassPool pool;
     public static void main(String[] args) {
+
         try {
             if(log.isInfoEnabled() && !log.isDebugEnabled()) {//Redirect output only if info logging mode
                 System.setOut(new PrintStream(new File("out.txt")));
@@ -152,7 +155,7 @@ public class App {
                             ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
 
                             try{
-                                //instrumenter.instrument();
+                                instrumenter.instrument();
                             } catch (Exception e) {
                                 log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
 
@@ -176,6 +179,9 @@ public class App {
             }
 
 
+            JUnitCore jUnitCore = new JUnitCore();
+            List<Class> classesToTest = new ArrayList<>();
+
             int succeed = 0;
             for (File testSuite : testSuites) {
                 ClassFile classFile = new ClassFile(new DataInputStream(new FileInputStream(testSuite.getAbsolutePath())));
@@ -184,31 +190,28 @@ public class App {
                     log.trace("Abstract Test Class found: {}, it will be ignored", classFile.getName());
                     continue;
                 }
+                log.trace("Add Test Class to be runned: {}", classFile.getName());
 
-                log.trace("Run TestSuite: {}", classFile.getName());
-                Result result = JUnitCore.runClasses(loader.loadClass(classFile.getName()));
+                classesToTest.add(loader.loadClass(classFile.getName()));
 
-                if (!result.wasSuccessful()) {
-                    log.error("{} Test Failed out of {} on {}", result.getFailureCount(), result.getRunCount(), classFile.getName());
-
-                    for(Failure failure : result.getFailures()) {
-                        log.warn("Test Failed for: {}", failure.toString());
-                        if(log.isDebugEnabled())
-                            failure.getException().printStackTrace(sysout);
-                    }
-                } else {
-                    succeed++;
-                    log.trace("All test in {}, was executed with success.", testSuite.getName());
-                }
             }
 
-            log.info("{} TestSuites out of {} was passed successfully", succeed, testSuites.size());
+            Suite suite = new Suite(new AllDefaultPossibilitiesBuilder(true), classesToTest.toArray(new Class[classesToTest.size()]));
+
+            RunNotifier notifier = new RunNotifier();
+
+            ExtendedTextListener listener = new ExtendedTextListener();
+            notifier.addListener(listener);
+            suite.run(notifier);
+
+            log.info("Runned {} tests, {} have failed", suite.testCount(), listener.getFailuresCount());
 
             ReportGenerator reportGenerator = ReportGeneratorFactory.getTextReportGenerator();
 
             PrintStream stream = new PrintStream(new File("VNVReport.txt"));
             reportGenerator.save(stream);
-        } catch (ClassNotFoundException | IOException e) {
+            log.info("report successfully saved !");
+        } catch (Throwable e) {
             log.warn("Exception {}", e.getMessage());
             log.error("An exception occured during analyses, please check git issues and create one if there is none of that kind at http://www.github.com/tanaht/VNVProject");
 
@@ -216,21 +219,5 @@ public class App {
                 e.printStackTrace(sysout);
         }
 
-    }
-
-    public static String helloWorld() {
-        return "Hello World";
-    }
-
-
-    public static String helloWhat(boolean b) {
-        String returnMsg = "";
-        if (b) {
-            returnMsg = "True";
-        } else {
-            returnMsg = "False";
-        }
-
-        return "Hello " + returnMsg;
     }
 }
