@@ -1,16 +1,21 @@
 package fr.istic.vnv;
 
+import fr.istic.vnv.instrumentation.ClassInstrumenter;
 import fr.istic.vnv.report.ReportGenerator;
 import fr.istic.vnv.report.ReportGeneratorFactory;
-import fr.istic.vnv.instrumentation.ClassInstrumenter;
 import fr.istic.vnv.utils.ExtendedTextListener;
 import javassist.*;
 import javassist.bytecode.ClassFile;
 import org.apache.commons.io.FileUtils;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.junit.internal.builders.AllDefaultPossibilitiesBuilder;
-import org.junit.runner.JUnitCore;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.Suite;
+import org.junit.runners.model.InitializationError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +39,190 @@ public class App {
     private static Logger log = LoggerFactory.getLogger(App.class);
 
     public static ClassPool pool;
+
+    private File projectDirectory;
+    private MavenProject mavenProject;
+
+    private File classesFolder, testClassesFolder;
+    private Suite suite;
+    private Loader loader;
+
+    public App(File projectDirectory) throws IOException, XmlPullParserException {
+        this.projectDirectory = projectDirectory;
+        MavenXpp3Reader mavenXpp3Reader = new MavenXpp3Reader();
+        Model model = mavenXpp3Reader.read(new FileInputStream(FileUtils.getFile(projectDirectory, "pom.xml")));
+        mavenProject = new MavenProject(model);
+    }
+
+    public void  buildDependencies() throws InterruptedException, IOException {
+        log.info("Generating Dependencies into {}... (it can take a few seconds)", FileUtils.getFile(projectDirectory, dependencyFolder).getAbsolutePath());
+        Process generatingDependenciesProcess = Runtime.getRuntime().exec("mvn dependency:copy-dependencies -DoutputDirectory=" + dependencyFolder, null,  projectDirectory);
+        generatingDependenciesProcess.waitFor();
+        log.info("...Done");
+    }
+
+    private Collection<File> initializeTestRuns() throws FileNotFoundException {
+        log.info("Start Dynamic analysis of {}", projectDirectory.getAbsolutePath());
+
+        classesFolder = FileUtils.getFile(projectDirectory, "target/classes");
+        testClassesFolder = FileUtils.getFile(projectDirectory, "target/test-classes");
+
+        if (!testClassesFolder.exists() || !classesFolder.exists()) {
+            log.warn("There is no compiled test to run or no compiles source code to test.");
+            throw new FileNotFoundException(testClassesFolder.getAbsolutePath() + " or " + classesFolder.getAbsolutePath() + " are nowhere to be found !");
+        }
+
+        Collection<File> testSuites = FileUtils.listFiles(testClassesFolder, new String[]{"class"}, true);
+
+        Stream<File> fileStream = testSuites.stream();
+
+        testSuites = fileStream.filter(file -> !file.getName().contains("$")).filter(file -> file.getName().endsWith("Test.class")).collect(Collectors.toCollection(ArrayList::new));
+
+        log.debug("Found {} test suites to run", testSuites.size());
+        pool = ClassPool.getDefault();
+        pool.importPackage("java.io");
+
+        try {
+            pool.appendClassPath(classesFolder.getPath());
+            pool.appendClassPath(testClassesFolder.getPath());
+
+            for(File jarFile : FileUtils.listFiles(FileUtils.getFile(projectDirectory, dependencyFolder), new String[]{"jar"}, true)) {
+                pool.appendClassPath(jarFile.getAbsolutePath());
+            }
+        } catch (NotFoundException e) {
+            if(log.isDebugEnabled())
+                e.printStackTrace(sysout);
+        }
+
+        return testSuites;
+    }
+
+    /**
+     * Initialize Loader
+     * - Delegate loading of packagename to not instrument
+     * - Add Translator to update bytecode being executed
+     */
+    private void initializeJavassistLoader() {
+        loader = new Loader(new URLClassLoader(new URL[]{}), pool);
+
+        /*
+         * Do not instrument the folowing packages:
+         * (by default Javassist do not instrument java.lang.* and other native methods)
+         */
+        loader.delegateLoadingOf("org.junit.");
+        loader.delegateLoadingOf("junit.");
+        loader.delegateLoadingOf("javassist.");
+        loader.delegateLoadingOf("fr.istic.vnv.");
+
+        log.info("{} {} {}", mavenProject.getId(), mavenProject.getGroupId(), mavenProject.getArtifactId());
+        for (int i = 0; i < mavenProject.getDependencies().size(); i++) {
+            Dependency dependency = (Dependency) mavenProject.getDependencies().get(i);
+
+            if(!mavenProject.getGroupId().equals(dependency.getGroupId())) {
+                loader.delegateLoadingOf(dependency.getGroupId());
+                log.debug("Delegate loading of {}", dependency.getGroupId() + ".");
+            }
+        }
+
+        try {
+            loader.addTranslator(pool, getApplicationTransaltor());
+        } catch (NotFoundException | CannotCompileException e) {
+            log.error("Unable to instrument some method due to: {}", e.getMessage());
+
+            if(log.isDebugEnabled())
+                e.printStackTrace(sysout);
+        }
+    }
+
+    private Translator getApplicationTransaltor() {
+        return new Translator() {
+            @Override
+            public void start(ClassPool pool) throws NotFoundException, CannotCompileException {}
+
+            @Override
+            public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
+                String classLocationPath = pool.find(classname).getPath().replace("\\", "/");
+
+                try{
+
+                    String testFolderPath = testClassesFolder.getCanonicalPath().replace("\\", "/");
+                    if(classLocationPath.contains(testFolderPath)) {
+                        // TODO: Here it is a test Class that is being loaded,
+                        // so perform appropriate bytecode manipulation if needed
+                        // (like if we want to know what unit test has called what related project method, when we compute execution trace).
+                        return;
+                    }
+
+                    log.trace("[JAVASSIST] {} {}", classLocationPath, classname);
+
+                    ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
+
+                    try{
+                        instrumenter.instrument();
+                    } catch (Exception e) {
+                        log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
+
+                        if(log.isDebugEnabled())
+                            e.printStackTrace(sysout);
+                    }
+
+                } catch (IOException e) {
+                    log.error("Unable to define if {} is in {} or not", classLocationPath, testClassesFolder.getPath());
+
+                    if(log.isDebugEnabled())
+                        e.printStackTrace(sysout);
+                }
+            }
+        };
+    }
+    private void runTests(Collection<File> testSuites) throws ClassNotFoundException, InitializationError, IOException {
+        List<Class> classesToTest = new ArrayList<>();
+
+        for (File testSuite : testSuites) {
+            ClassFile classFile = new ClassFile(new DataInputStream(new FileInputStream(testSuite.getAbsolutePath())));
+
+            if(classFile.isAbstract()) {
+                log.trace("Abstract Test Class found: {}, it will be ignored", classFile.getName());
+                continue;
+            }
+            log.trace("Add Test Class to be runned: {}", classFile.getName());
+
+            classesToTest.add(loader.loadClass(classFile.getName()));
+
+        }
+
+        Suite suite = new Suite(new AllDefaultPossibilitiesBuilder(true), classesToTest.toArray(new Class[classesToTest.size()]));
+
+        RunNotifier notifier = new RunNotifier();
+
+        ExtendedTextListener listener = new ExtendedTextListener(suite.testCount());
+        notifier.addListener(listener);
+        suite.run(notifier);
+
+        log.info("Runned {} tests, {} have failed", suite.testCount(), listener.getFailuresCount());
+
+        ReportGenerator reportGenerator = ReportGeneratorFactory.getTextReportGenerator();
+
+        PrintStream stream = new PrintStream(new File("VNVReport.txt"));
+        reportGenerator.save(stream);
+        log.info("report successfully saved !");
+    }
+
+    public void run() throws FileNotFoundException {
+
+        Collection<File> testSuites = initializeTestRuns();
+        initializeJavassistLoader();
+
+        try {
+            runTests(testSuites);
+        } catch (ClassNotFoundException | InitializationError | IOException e) {
+            log.warn("Exception {}", e.getMessage());
+            log.error("An exception occured during analyses, please check git issues and create one if there is none of that kind at http://www.github.com/tanaht/VNVProject");
+
+            if(log.isDebugEnabled())
+                e.printStackTrace(sysout);
+        }
+    }
     public static void main(String[] args) {
 
         try {
@@ -53,171 +242,36 @@ public class App {
             return;
         }
 
-        File mavenProject = new File(args[0]);
+        File projectDirectory = new File(args[0]);
 
-        if (!mavenProject.exists() || !mavenProject.isDirectory() || !FileUtils.getFile(mavenProject, "pom.xml").exists()) {
+        if (!projectDirectory.exists() || !projectDirectory.isDirectory() || !FileUtils.getFile(projectDirectory, "pom.xml").exists()) {
             log.error("Please provide a valid path to a maven project in argument to this program.");
             return;
         }
 
+        App application = null;
+        try {
+            application = new App(projectDirectory);
+        } catch(IOException | XmlPullParserException e) {
+            log.error("Unable to read properly file 'pom.xml' into {} perhaps it is corrupted ?", projectDirectory.getAbsolutePath());
+            return;
+        }
 
         try {
-            log.info("Generating Dependencies into {}...", FileUtils.getFile(mavenProject, dependencyFolder).getAbsolutePath());
-            Process generatingDependenciesProcess = Runtime.getRuntime().exec("mvn dependency:copy-dependencies -DoutputDirectory=" + dependencyFolder, null,  mavenProject);
-            generatingDependenciesProcess.waitFor();
-            log.info("...Done");
-        } catch (IOException | InterruptedException e) {
+            application.buildDependencies();
+        } catch(IOException | InterruptedException e) {
             log.error(e.getMessage());
 
             if(log.isDebugEnabled())
                 e.printStackTrace(sysout);
         }
 
-        log.info("Start Dynamic analysis of {}", mavenProject.getAbsolutePath());
-
-        File classesFolder = FileUtils.getFile(mavenProject, "target/classes");
-        File testClassesFolder = FileUtils.getFile(mavenProject, "target/test-classes");
-
-        if (!testClassesFolder.exists() || !classesFolder.exists()) {
-            log.warn("There is no compiled test to run or no compiles source code to test.");
-            return;
-        }
-
         try {
-
-            List<URL> classToLoad = new ArrayList<>();
-
-            classToLoad.add(testClassesFolder.toURI().toURL());
-            classToLoad.add(classesFolder.toURI().toURL());
-
-
-            for(File jarFile : FileUtils.listFiles(FileUtils.getFile(mavenProject, dependencyFolder), new String[]{"jar"}, true)) {
-                String urlPath = "jar:file:" + jarFile.getAbsolutePath() + "!/";
-                classToLoad.add(new URL(urlPath));
-                log.debug("Adding {} to ClassLoader", jarFile.getCanonicalPath());
-            }
-
-            URLClassLoader classLoader = URLClassLoader.newInstance(classToLoad.toArray(new URL[classToLoad.size()]));
-
-            Collection<File> testSuites = FileUtils.listFiles(testClassesFolder, new String[]{"class"}, true);
-
-            Stream<File> fileStream = testSuites.stream();
-
-            testSuites = fileStream.filter(file -> !file.getName().contains("$")).filter(file -> file.getName().endsWith("Test.class")).collect(Collectors.toCollection(ArrayList::new));
-
-            log.debug("Found {} test suites to run", testSuites.size());
-            pool = ClassPool.getDefault();
-            pool.importPackage("java.io");
-
-            try {
-                pool.appendClassPath(classesFolder.getPath());
-                pool.appendClassPath(testClassesFolder.getPath());
-
-                for(File jarFile : FileUtils.listFiles(FileUtils.getFile(mavenProject, dependencyFolder), new String[]{"jar"}, true)) {
-                    pool.appendClassPath(jarFile.getAbsolutePath());
-                }
-            } catch (NotFoundException e) {
-                if(log.isDebugEnabled())
-                    e.printStackTrace(sysout);
-            }
-
-            Loader loader = new Loader(classLoader, pool);
-
-            /*
-             * Do not instrument the folowing packages:
-             * (by default Javassist do not instrument java.lang.* and other native methods)
-             */
-            loader.delegateLoadingOf("org.junit.");
-            loader.delegateLoadingOf("javassist.");
-            loader.delegateLoadingOf("fr.istic.vnv.");
-
-            try {
-                loader.addTranslator(pool, new Translator() {
-                    @Override
-                    public void start(ClassPool pool) throws NotFoundException, CannotCompileException {}
-
-                    @Override
-                    public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
-                        String classLocationPath = pool.find(classname).getPath().replace("\\", "/");
-
-                        try{
-
-                            String testFolderPath = testClassesFolder.getCanonicalPath().replace("\\", "/");
-                            if(classLocationPath.contains(testFolderPath)) {
-                                // TODO: Here it is a test Class that is being loaded,
-                                // so perform appropriate bytecode manipulation if needed
-                                // (like if we want to know what unit test has called what related project method, when we compute execution trace).
-                                return;
-                            }
-
-                            log.trace("[JAVASSIST] {} {}", classLocationPath, classname);
-
-                            ClassInstrumenter instrumenter = new ClassInstrumenter(pool.getCtClass(classname));
-
-                            try{
-                                instrumenter.instrument();
-                            } catch (Exception e) {
-                                log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
-
-                                if(log.isDebugEnabled())
-                                    e.printStackTrace(sysout);
-                            }
-
-                        } catch (IOException e) {
-                            log.error("Unable to define if {} is in {} or not", classLocationPath, testClassesFolder.getPath());
-
-                            if(log.isDebugEnabled())
-                                e.printStackTrace(sysout);
-                        }
-                    }
-                });
-            } catch (NotFoundException | CannotCompileException e) {
-                log.error("Unable to instrument some method due to: {}", e.getMessage());
-
-                if(log.isDebugEnabled())
-                    e.printStackTrace(sysout);
-            }
-
-
-            JUnitCore jUnitCore = new JUnitCore();
-            List<Class> classesToTest = new ArrayList<>();
-
-            int succeed = 0;
-            for (File testSuite : testSuites) {
-                ClassFile classFile = new ClassFile(new DataInputStream(new FileInputStream(testSuite.getAbsolutePath())));
-
-                if(classFile.isAbstract()) {
-                    log.trace("Abstract Test Class found: {}, it will be ignored", classFile.getName());
-                    continue;
-                }
-                log.trace("Add Test Class to be runned: {}", classFile.getName());
-
-                classesToTest.add(loader.loadClass(classFile.getName()));
-
-            }
-
-            Suite suite = new Suite(new AllDefaultPossibilitiesBuilder(true), classesToTest.toArray(new Class[classesToTest.size()]));
-
-            RunNotifier notifier = new RunNotifier();
-
-            ExtendedTextListener listener = new ExtendedTextListener();
-            notifier.addListener(listener);
-            suite.run(notifier);
-
-            log.info("Runned {} tests, {} have failed", suite.testCount(), listener.getFailuresCount());
-
-            ReportGenerator reportGenerator = ReportGeneratorFactory.getTextReportGenerator();
-
-            PrintStream stream = new PrintStream(new File("VNVReport.txt"));
-            reportGenerator.save(stream);
-            log.info("report successfully saved !");
-        } catch (Throwable e) {
-            log.warn("Exception {}", e.getMessage());
-            log.error("An exception occured during analyses, please check git issues and create one if there is none of that kind at http://www.github.com/tanaht/VNVProject");
-
-            if(log.isDebugEnabled())
-                e.printStackTrace(sysout);
+            application.run();
+        } catch (FileNotFoundException e) {
+            log.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("Uncatch Exception {}", e.getMessage());
         }
-
     }
 }
