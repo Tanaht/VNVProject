@@ -2,6 +2,7 @@ package fr.istic.vnv.instrumentation;
 
 import fr.istic.vnv.App;
 import fr.istic.vnv.analysis.AnalysisContext;
+import fr.istic.vnv.utils.Config;
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
 import javassist.CtClass;
@@ -50,38 +51,39 @@ public class BehaviorInstrumenter implements Instrumenter {
     }
 
     public void instrument() {
-        if(!this.type.equals(ClassInstrumenter.CLASS.COMMON)) {
+        if (!this.type.equals(ClassInstrumenter.CLASS.COMMON)) {
             log.trace("{} is not instrumented because not common class", this.ctBehavior.getDeclaringClass().getName());
             return;
         }
 
-        if(this.ctBehavior.isEmpty()) {
+        if (this.ctBehavior.isEmpty()) {
             log.trace("{} is not instrumented because empty method body", this.ctBehavior.getLongName());
             return;
         }
 
-        log.debug("Instrument method {}{}", ctBehavior.getName(), Descriptor.toString(ctBehavior.getSignature()));
+        log.trace("Instrument method {}{}", ctBehavior.getName(), Descriptor.toString(ctBehavior.getSignature()));
 
-        try {
-            log.trace("Line Coverage Instrumentation of {}", ctBehavior.getLongName());
-            lineCoverageInstrumentation();
-        } catch (BadBytecode badBytecode) {
-            log.error("Unable to perform branch coverage instrumentation {}, cause {}", this.ctBehavior.getLongName(), badBytecode.getMessage());
-
-
-
-            if(log.isDebugEnabled())
-                badBytecode.printStackTrace(App.sysout);
+        if(Config.get().doBranchCoverage()) {
+            try {
+                log.trace("Line Coverage Instrumentation of {}", ctBehavior.getLongName());
+                lineCoverageInstrumentation();
+            } catch (BadBytecode badBytecode) {
+                log.error("Unable to perform branch coverage instrumentation {}, cause {}", this.ctBehavior.getLongName(), badBytecode.getMessage());
+                if (log.isDebugEnabled())
+                    badBytecode.printStackTrace(App.syserr);
+            }
         }
 
-        try {
-            log.trace("Execution Trace Instrumentation of {}", ctBehavior.getLongName());
-            traceExecutionInstrumentation();
-        } catch (CannotCompileException e) {
-            log.error("Unable to perform trace execution instrumentation {}, cause {}", this.ctBehavior.getLongName(), e.getReason());
+        if(Config.get().doExecutionTrace()) {
+            try {
+                log.trace("Execution Trace Instrumentation of {}", ctBehavior.getLongName());
+                traceExecutionInstrumentation();
+            } catch (CannotCompileException e) {
+                log.error("Unable to perform trace execution instrumentation {}, cause {}", this.ctBehavior.getLongName(), e.getReason());
 
-            if(log.isDebugEnabled())
-                e.printStackTrace(App.sysout);
+                if (log.isDebugEnabled())
+                    e.printStackTrace(App.syserr);
+            }
         }
     }
 
@@ -90,10 +92,8 @@ public class BehaviorInstrumenter implements Instrumenter {
      * @throws CannotCompileException
      */
     private void traceExecutionInstrumentation() throws CannotCompileException {
-        ctBehavior.getDeclaringClass().getClassPool().importPackage("fr.istic.vnv.analysis");
-        String beforeInstr = "[START]" + ctBehavior.getDeclaringClass().getName() + '.' + ctBehavior.getName();
+        String beforeInstr = ctBehavior.getDeclaringClass().getName() + '.' + ctBehavior.getName();
         ctBehavior.insertBefore("{ AnalysisContext.addStartExecutionTrace(\"" + beforeInstr + "\", $args); }");
-        ctBehavior.insertAfter("{ AnalysisContext.addEndExecutionTrace(); }");
     }
 
     protected void lineCoverageInstrumentation() throws BadBytecode {
@@ -104,7 +104,6 @@ public class BehaviorInstrumenter implements Instrumenter {
 
             instrumentBlockIndexedAt(codeAttribute, getBlocks()[current++].index());
         }
-
     }
 
     private void instrumentBlockIndexedAt(CodeAttribute codeAttribute, int blockIndex) throws BadBytecode {
@@ -138,6 +137,8 @@ public class BehaviorInstrumenter implements Instrumenter {
     }
 
     private void insertLineCoverageCallback(Bytecode bytecode, int blockIndex, int lineNumber) {
+        if(AnalysisContext.getAnalysisContext().isInstrumented(this.ctBehavior.getName() + this.ctBehavior.getSignature()))
+            log.error("It is being reinstrumented");
         bytecode.addLdc(this.getCtBehavior().getDeclaringClass().getName());
         // Here we use getDescriptor to avoid anything about polymorphism in input project.
         bytecode.addLdc(this.getCtBehavior().getName() + this.getCtBehavior().getMethodInfo().getDescriptor());

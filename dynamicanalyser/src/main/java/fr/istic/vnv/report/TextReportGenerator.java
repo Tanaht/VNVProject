@@ -1,15 +1,22 @@
 package fr.istic.vnv.report;
 
+import fr.istic.vnv.utils.Config;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintStream;
+import java.io.*;
+import java.util.List;
 
 public class TextReportGenerator extends ReportGenerator {
     private Logger log = LoggerFactory.getLogger(TextReportGenerator.class);
+    private int executionTraceCounter;
 
-    @Override
-    public void save(PrintStream stream) {
+    public TextReportGenerator(File saveFolder) throws IOException {
+        super(saveFolder);
+    }
+
+    private void saveBranchCoverage(PrintStream stream) {
         log.info("Generating report for Branch Coverage Details...");
         stream.println("Branch Coverage:");
         stream.println("==================");
@@ -18,38 +25,51 @@ public class TextReportGenerator extends ReportGenerator {
             stream.println(super.getContext().getClassContext(className));
         }
 
-        stream.println();
+        stream.close();
+    }
 
-        log.info("Generating report for Execution Trace Details... (it can take a few minutes)");
-        stream.println("Execution Trace:");
-        stream.println("==================");
+    public void saveExecutionTraceUntilThen() {
+        File executionTraceFragment = FileUtils.getFile(super.getSaveFolder(), "VNVReport-ExecutionTrace." + ++executionTraceCounter + ".txt");
+        try {
+            executionTraceFragment.createNewFile();
+            PrintWriter stream = new PrintWriter(new BufferedWriter(new FileWriter(executionTraceFragment)));
+            log.info("Generating report n°{} for Execution Trace Details... (it can take a few minutes)", executionTraceCounter);
+            stream.println("Execution Trace:");
+            stream.println("==================");
 
+            List<String> executionTrace = super.getContext().getExecutionTrace();
 
-        int size = super.getContext().getExecutionTrace().size();
-        double percent = 0;
-        for (int i = 0; i < size; i++) {
-            String str = super.getContext().getExecutionTrace().get(i);
-
-            double actualPercent = (i+1.0)/ size * 100.0;
-
-            if(Math.floor(actualPercent) > Math.floor(percent)) {
-                percent = actualPercent;
-
-                if(!log.isDebugEnabled() && (
-                        Math.floor(percent) == 1 ||
-                        Math.floor(percent) == 25 ||
-                        Math.floor(percent) == 50 ||
-                        Math.floor(percent) == 75 ||
-                        Math.floor(percent) == 100)
-                ) {
-                    log.info("Percent {} %", Math.floor(percent));
+            while(!executionTrace.isEmpty()) {
+                stream.println(executionTrace.remove(0));
+                if(executionTrace.size() % 100000 == 0) {
+                    log.trace("Remain execution traces to store into {}: {}", executionTraceFragment.getAbsolutePath(), executionTrace.size());
                 }
-                log.debug("Percent {} %", Math.floor(percent));
             }
-            stream.println(str);
 
+            stream.close();
+
+        } catch(IOException e) {
+            log.error(e.getMessage());
+        }
+        log.trace("Execution Trace have been saved correctly into {}", executionTraceFragment.getAbsolutePath());
+    }
+
+    @Override
+    public void save() {
+
+        if(Config.get().doBranchCoverage()) {
+            try {
+                File branchCoverageReport = FileUtils.getFile(super.getSaveFolder(), "VNVReport-BranchCoverage.txt");
+                branchCoverageReport.createNewFile();
+                saveBranchCoverage(new PrintStream(branchCoverageReport));
+            } catch (IOException e) {
+                log.error("Unable to save Branch Coverage report: " + e.getMessage());
+            }
         }
 
-        log.info("...Done");
+        if(!Config.get().doExecutionTrace())
+            return;
+
+        saveExecutionTraceUntilThen();
     }
 }

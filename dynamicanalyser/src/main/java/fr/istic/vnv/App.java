@@ -3,6 +3,7 @@ package fr.istic.vnv;
 import fr.istic.vnv.instrumentation.ClassInstrumenter;
 import fr.istic.vnv.report.ReportGenerator;
 import fr.istic.vnv.report.ReportGeneratorFactory;
+import fr.istic.vnv.utils.Config;
 import fr.istic.vnv.utils.ExtendedTextListener;
 import javassist.*;
 import javassist.bytecode.ClassFile;
@@ -33,9 +34,14 @@ import java.util.stream.Stream;
  *
  */
 public class App {
-    public static final PrintStream sysout = new PrintStream(new FileOutputStream(FileDescriptor.err));
+    public static final PrintStream syserr = new PrintStream(new FileOutputStream(FileDescriptor.err));
 
-    private static final String dependencyFolder = "target/vnv-dependencies/";
+
+    private static final String
+            vnvDistantFolder = "target/vnv/",
+            dependencyFolder = vnvDistantFolder + "vnv-dependencies/",
+            analysisSaveFolder = vnvDistantFolder + "vnv-analysis/";
+
     private static Logger log = LoggerFactory.getLogger(App.class);
 
     public static ClassPool pool;
@@ -44,14 +50,38 @@ public class App {
     private MavenProject mavenProject;
 
     private File classesFolder, testClassesFolder;
-    private Suite suite;
     private Loader loader;
+    private ReportGenerator generator;
 
     public App(File projectDirectory) throws IOException, XmlPullParserException {
         this.projectDirectory = projectDirectory;
+
+        try {
+            if(Config.get().doOutputRedirection() && log.isInfoEnabled() && !log.isDebugEnabled()) {//Redirect output only in info logging mode if environment is set
+                File vnvFolder = FileUtils.getFile(projectDirectory, vnvDistantFolder);
+
+                if(!vnvFolder.exists()) {
+                    FileUtils.forceMkdir(vnvFolder);
+                }
+
+                File output = FileUtils.getFile(vnvFolder, "out.txt");
+                File errput = FileUtils.getFile(vnvFolder, "err.txt");
+                output.createNewFile();
+                errput.createNewFile();
+                System.setOut(new PrintStream(output));
+                System.setErr(new PrintStream(errput));
+            }
+        } catch (IOException e) {
+            log.error("Impossible to redirect standards output into out.txt and err.txt");
+            if(log.isDebugEnabled())
+                e.printStackTrace(syserr);
+        }
+
         MavenXpp3Reader mavenXpp3Reader = new MavenXpp3Reader();
         Model model = mavenXpp3Reader.read(new FileInputStream(FileUtils.getFile(projectDirectory, "pom.xml")));
         mavenProject = new MavenProject(model);
+
+        this.generator = ReportGeneratorFactory.getTextReportGenerator(FileUtils.getFile(projectDirectory, analysisSaveFolder));
     }
 
     public void  buildDependencies() throws InterruptedException, IOException {
@@ -91,7 +121,7 @@ public class App {
             }
         } catch (NotFoundException e) {
             if(log.isDebugEnabled())
-                e.printStackTrace(sysout);
+                e.printStackTrace(syserr);
         }
 
         return testSuites;
@@ -102,8 +132,24 @@ public class App {
      * - Delegate loading of packagename to not instrument
      * - Add Translator to update bytecode being executed
      */
-    private void initializeJavassistLoader() {
-        loader = new Loader(new URLClassLoader(new URL[]{}), pool);
+    private void initializeJavassistLoader() throws IOException {
+
+        List<URL> classToLoad = new ArrayList<>();
+
+        classToLoad.add(testClassesFolder.toURI().toURL());
+        classToLoad.add(classesFolder.toURI().toURL());
+
+
+        for(File jarFile : FileUtils.listFiles(FileUtils.getFile(projectDirectory, dependencyFolder), new String[]{"jar"}, true)) {
+            String urlPath = "jar:file:" + jarFile.getAbsolutePath() + "!/";
+            classToLoad.add(new URL(urlPath));
+            log.debug("Adding {} to ClassLoader", jarFile.getCanonicalPath());
+        }
+
+        URLClassLoader classLoader = URLClassLoader.newInstance(classToLoad.toArray(new URL[classToLoad.size()]));
+
+
+        loader = new Loader(classLoader, pool);
 
         /*
          * Do not instrument the folowing packages:
@@ -114,23 +160,24 @@ public class App {
         loader.delegateLoadingOf("javassist.");
         loader.delegateLoadingOf("fr.istic.vnv.");
 
-        log.info("{} {} {}", mavenProject.getId(), mavenProject.getGroupId(), mavenProject.getArtifactId());
         for (int i = 0; i < mavenProject.getDependencies().size(); i++) {
             Dependency dependency = (Dependency) mavenProject.getDependencies().get(i);
 
-            if(!mavenProject.getGroupId().equals(dependency.getGroupId())) {
-                loader.delegateLoadingOf(dependency.getGroupId());
-                log.debug("Delegate loading of {}", dependency.getGroupId() + ".");
+            if(!mavenProject.getGroupId().equals(dependency.getGroupId()) && !mavenProject.getGroupId().equals(mavenProject.getArtifactId())) {
+                loader.delegateLoadingOf(dependency.getGroupId() + ".");
+                log.info("Delegate loading of {}", dependency.getGroupId() + ".");
             }
         }
 
-        try {
-            loader.addTranslator(pool, getApplicationTransaltor());
-        } catch (NotFoundException | CannotCompileException e) {
-            log.error("Unable to instrument some method due to: {}", e.getMessage());
+        if(Config.get().doExecutionTrace() || Config.get().doBranchCoverage()) {
+            try {
+                loader.addTranslator(pool, getApplicationTransaltor());
+            } catch (NotFoundException | CannotCompileException e) {
+                log.error("Unable to instrument some method due to: {}", e.getMessage());
 
-            if(log.isDebugEnabled())
-                e.printStackTrace(sysout);
+                if (log.isDebugEnabled())
+                    e.printStackTrace(syserr);
+            }
         }
     }
 
@@ -163,14 +210,14 @@ public class App {
                         log.error("Unable to instrument {}, cause {}", classname, e.getMessage());
 
                         if(log.isDebugEnabled())
-                            e.printStackTrace(sysout);
+                            e.printStackTrace(syserr);
                     }
 
                 } catch (IOException e) {
                     log.error("Unable to define if {} is in {} or not", classLocationPath, testClassesFolder.getPath());
 
                     if(log.isDebugEnabled())
-                        e.printStackTrace(sysout);
+                        e.printStackTrace(syserr);
                 }
             }
         };
@@ -195,22 +242,20 @@ public class App {
 
         RunNotifier notifier = new RunNotifier();
 
-        ExtendedTextListener listener = new ExtendedTextListener(suite.testCount());
+        ExtendedTextListener listener = new ExtendedTextListener(generator, suite.testCount());
         notifier.addListener(listener);
         suite.run(notifier);
 
         log.info("Runned {} tests, {} have failed", suite.testCount(), listener.getFailuresCount());
 
-        ReportGenerator reportGenerator = ReportGeneratorFactory.getTextReportGenerator();
-
-        PrintStream stream = new PrintStream(new File("VNVReport.txt"));
-        reportGenerator.save(stream);
-        log.info("report successfully saved !");
+        generator.save();
+        log.info("report successfully saved in {} !", FileUtils.getFile(projectDirectory, analysisSaveFolder).getAbsolutePath());
     }
 
-    public void run() throws FileNotFoundException {
+    public void run() throws IOException {
 
         Collection<File> testSuites = initializeTestRuns();
+
         initializeJavassistLoader();
 
         try {
@@ -220,23 +265,10 @@ public class App {
             log.error("An exception occured during analyses, please check git issues and create one if there is none of that kind at http://www.github.com/tanaht/VNVProject");
 
             if(log.isDebugEnabled())
-                e.printStackTrace(sysout);
+                e.printStackTrace(syserr);
         }
     }
     public static void main(String[] args) {
-
-        try {
-            if(log.isInfoEnabled() && !log.isDebugEnabled()) {//Redirect output only if info logging mode
-                System.setOut(new PrintStream(new File("out.txt")));
-                System.setErr(new PrintStream(new File("err.txt")));
-            }
-        } catch (FileNotFoundException e) {
-            log.error("Impossible to redirect standards output into out.txt and err.txt");
-            if(log.isDebugEnabled())
-                e.printStackTrace(sysout);
-            return;
-        }
-
         if (args.length != 1) {
             log.error("Please provide path to a maven project in argument to this program.");
             return;
@@ -254,6 +286,8 @@ public class App {
             application = new App(projectDirectory);
         } catch(IOException | XmlPullParserException e) {
             log.error("Unable to read properly file 'pom.xml' into {} perhaps it is corrupted ?", projectDirectory.getAbsolutePath());
+
+            e.printStackTrace(syserr);
             return;
         }
 
@@ -263,7 +297,7 @@ public class App {
             log.error(e.getMessage());
 
             if(log.isDebugEnabled())
-                e.printStackTrace(sysout);
+                e.printStackTrace(syserr);
         }
 
         try {
@@ -271,7 +305,11 @@ public class App {
         } catch (FileNotFoundException e) {
             log.error(e.getMessage());
         } catch (Exception e) {
-            log.error("Uncatch Exception {}", e.getMessage());
+            log.error("Unknown Exception {}", e.getMessage());
+
+            e.printStackTrace(syserr);
         }
+
+        System.exit(0);
     }
 }

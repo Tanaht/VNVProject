@@ -38,39 +38,96 @@ public class AnalysisContext {
     }
 
     public static void createBranchCoverage(String className, String methodName, int block, int lineNumber) {
-        AnalysisContext context = getAnalysisContext();
+        try {
+            AnalysisContext context = getAnalysisContext();
 
-        ClassContext classContext = context.getClassContext(className);
-        BehaviorContext behaviorContext = classContext.getBehaviorContext(methodName);
+            ClassContext classContext = context.getClassContext(className);
+            BehaviorContext behaviorContext = classContext.getBehaviorContext(methodName);
 
-        //This line create the appropriate lineCounter instance.
-        behaviorContext.getLineCounter(lineNumber).createCounter(block);
+            //This line create the appropriate lineCounter instance.
+            behaviorContext.getLineCounter(lineNumber).createCounter(block);
 
-        log.trace("At {} {} Create counter of block {} at line {}", className, methodName, block, lineNumber);
+            log.trace("At {} {} Create counter of block {} at line {}", className, methodName, block, lineNumber);
+        } catch (Exception e) {
+            // FIXME: This error is ignored because it appears to not cause major problems even if it is trigerred many times
+            log.trace("At {} {} Try to recreate counter of block {} at line {}", className, methodName, block, lineNumber);
+
+//            if(log.isDebugEnabled())
+//                e.printStackTrace(App.syserr);
+        }
     }
 
     private List<String> executionTrace;
     private Map<String, ClassContext> classContexts;
+    private int maxExecutionTraceDepth, currentExecutionTraceDepth;
+    private List<String> instrumentedMethods;
 
-    private AnalysisContext() {
-        this.executionTrace = new ArrayList<>();
-        this.classContexts = new HashMap<>();
+    public void resetCurrentExecutionTraceDepth() {
+        this.currentExecutionTraceDepth = 0;
     }
 
+    private AnalysisContext() {
+        this.maxExecutionTraceDepth = 3;
+        this.currentExecutionTraceDepth = 0;
+        this.executionTrace = new ArrayList<>();
+        this.classContexts = new HashMap<>();
+        this.instrumentedMethods = new ArrayList<>();
+    }
+
+    public void addExecutionTrace(String message) {
+        getAnalysisContext().executionTrace.add(message);
+    }
     /**
      * Called By Javassisted methods at starts of each of them.
      * @param trace message to record
      * @param args arguments list of javassisted method.
      */
     public static void addStartExecutionTrace(String trace, Object... args) {
-        getAnalysisContext().executionTrace.add(trace);
+
+        if(++getAnalysisContext().currentExecutionTraceDepth > getAnalysisContext().maxExecutionTraceDepth)
+            return;
+
+        StringBuilder parametersBuilder = new StringBuilder(trace).append("(");
+
+        for (int i = 0; i < args.length; i++) {
+            if(args[i] == null) {
+                parametersBuilder.append("null, ");
+                continue;
+            }
+
+            if(args[i].getClass().isPrimitive()) {
+                parametersBuilder.append(args[i].toString()).append(", ");
+                continue;
+            }
+
+            if(args[i] instanceof String) {
+                if (((String) args[i]).length() > 15) {
+                    parametersBuilder.append(((String) args[i]).substring(0, 15)).append("..., ");
+                } else {
+                    parametersBuilder.append((String) args[i]).append(", ");
+                }
+                continue;
+            }
+
+            parametersBuilder.append(System.identityHashCode(args[i])).append(", ");
+
+
+        }
+        parametersBuilder.append(")");
+
+        if(getAnalysisContext().executionTrace.indexOf(parametersBuilder.toString()) != -1) {
+            getAnalysisContext().addExecutionTrace(trace);
+        } else {
+            getAnalysisContext().addExecutionTrace(parametersBuilder.toString());
+        }
     }
 
-    /**
-     * Called by Javassisted methods at ends of each of them.
-     */
-    public static void addEndExecutionTrace() {
-        getAnalysisContext().executionTrace.add("[END]");
+    public boolean isInstrumented(String methodDescriptor) {
+        return this.instrumentedMethods.contains(methodDescriptor);
+    }
+
+    public void instrument(String methodDescriptor) {
+        this.instrumentedMethods.add(methodDescriptor);
     }
 
     public List<String> getExecutionTrace() {
