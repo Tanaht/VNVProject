@@ -11,10 +11,15 @@ This project use mvn command so it is require to have mvn installed and correctl
 
 ####There is 3 System properties this application used:
 
-instrumentation.execution_trace: true|false tells VNVProject to generate a Trace Execution report. default set to false.
-instrumentation.branch_coverage: true|false tells VNVProject to generate a Branch Coverage report. default set to true.
-log.redirect_output: true|false tells VNVProject to redirect inputs project outputs into $(input_project.home)/target/vnv/out.txt and the same for errput into err.txt, default set to true. only available while "INFO" logging level is set
+instrumentation.execution_trace: true|false tells VNVProject to generate a Trace Execution report. (default set to false).
+instrumentation.branch_coverage: true|false tells VNVProject to generate a Branch Coverage report. (default set to true).
+log.redirect_output: true|false tells VNVProject to redirect inputs project outputs into $(input_project.home)/target/vnv/out.txt and the same for errput into err.txt, (default set to true). only available while "INFO" logging level is set
 
+if instrumentation.execution_trace is set to true there is a last system property:
+
+instrumentation.execution_trace.depth: [0..9]+|max tells VNVProject to generate a Trace execution report 
+but for each test run it will record only a number of trace execution equals to this number, 
+if it is set to 'max', then it will record all traces execution possible. (Default set to 3)
 ####How to use them ?
 
 These properties can be set when starting the program like this:

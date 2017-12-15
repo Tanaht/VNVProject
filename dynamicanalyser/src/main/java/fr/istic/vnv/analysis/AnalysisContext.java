@@ -1,5 +1,6 @@
 package fr.istic.vnv.analysis;
 
+import fr.istic.vnv.utils.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +68,7 @@ public class AnalysisContext {
     }
 
     private AnalysisContext() {
-        this.maxExecutionTraceDepth = 3;
+        this.maxExecutionTraceDepth = Config.get().getTraceDepth();
         this.currentExecutionTraceDepth = 0;
         this.executionTrace = new ArrayList<>();
         this.classContexts = new HashMap<>();
@@ -84,8 +85,9 @@ public class AnalysisContext {
      */
     public static void addStartExecutionTrace(String trace, Object... args) {
 
-        if(++getAnalysisContext().currentExecutionTraceDepth > getAnalysisContext().maxExecutionTraceDepth)
-            return;
+        if(getAnalysisContext().maxExecutionTraceDepth != -1)
+            if(++getAnalysisContext().currentExecutionTraceDepth > getAnalysisContext().maxExecutionTraceDepth)
+                return;
 
         StringBuilder parametersBuilder = new StringBuilder(trace).append("(");
 

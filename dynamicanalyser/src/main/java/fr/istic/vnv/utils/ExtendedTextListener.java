@@ -44,7 +44,9 @@ public class ExtendedTextListener extends RunListener {
         super.testStarted(description);
         log.debug("Start Test {} - {}", description.getClassName(), description.getMethodName());
 
-        AnalysisContext.getAnalysisContext().resetCurrentExecutionTraceDepth();
+        if(Config.get().getTraceDepth() != -1)
+            AnalysisContext.getAnalysisContext().resetCurrentExecutionTraceDepth();
+
         AnalysisContext.getAnalysisContext().addExecutionTrace("[TEST] " + description.getClassName() + " - " + description.getMethodName());
     }
 
