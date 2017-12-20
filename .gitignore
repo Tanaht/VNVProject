@@ -21,3 +21,7 @@ target/
 VNVReport\.txt
 
 err\.txt
+
+metastore_db/
+
+derby\.log

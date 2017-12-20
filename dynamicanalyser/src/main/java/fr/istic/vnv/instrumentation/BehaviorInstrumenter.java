@@ -2,13 +2,13 @@ package fr.istic.vnv.instrumentation;
 
 import fr.istic.vnv.App;
 import fr.istic.vnv.analysis.AnalysisContext;
+import fr.istic.vnv.utils.Config;
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.NotFoundException;
 import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
-import javassist.tools.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,38 +51,39 @@ public class BehaviorInstrumenter implements Instrumenter {
     }
 
     public void instrument() {
-        if(!this.type.equals(ClassInstrumenter.CLASS.COMMON)) {
+        if (!this.type.equals(ClassInstrumenter.CLASS.COMMON)) {
             log.trace("{} is not instrumented because not common class", this.ctBehavior.getDeclaringClass().getName());
             return;
         }
 
-        if(this.ctBehavior.isEmpty()) {
+        if (this.ctBehavior.isEmpty()) {
             log.trace("{} is not instrumented because empty method body", this.ctBehavior.getLongName());
             return;
         }
 
-        log.debug("Instrument class {}", ctBehavior.getLongName());
+        log.trace("Instrument method {}{}", ctBehavior.getName(), Descriptor.toString(ctBehavior.getSignature()));
 
-        try {
-            log.trace("Line Coverage Instrumentation of {}", ctBehavior.getLongName());
-            lineCoverageInstrumentation();
-        } catch (BadBytecode badBytecode) {
-            log.error("Unable to perform branch coverage instrumentation {}, cause {}", this.ctBehavior.getLongName(), badBytecode.getMessage());
-
-
-
-            if(log.isDebugEnabled())
-                badBytecode.printStackTrace(App.sysout);
+        if(Config.get().doBranchCoverage()) {
+            try {
+                log.trace("Line Coverage Instrumentation of {}", ctBehavior.getLongName());
+                lineCoverageInstrumentation();
+            } catch (BadBytecode badBytecode) {
+                log.error("Unable to perform branch coverage instrumentation {}, cause {}", this.ctBehavior.getLongName(), badBytecode.getMessage());
+                if (log.isDebugEnabled())
+                    badBytecode.printStackTrace(App.syserr);
+            }
         }
 
-        try {
-            log.trace("Execution Trace Instrumentation of {}", ctBehavior.getLongName());
-            traceExecutionInstrumentation();
-        } catch (CannotCompileException e) {
-            log.error("Unable to perform trace execution instrumentation {}, cause {}", this.ctBehavior.getLongName(), e.getReason());
+        if(Config.get().doExecutionTrace()) {
+            try {
+                log.trace("Execution Trace Instrumentation of {}", ctBehavior.getLongName());
+                traceExecutionInstrumentation();
+            } catch (CannotCompileException e) {
+                log.error("Unable to perform trace execution instrumentation {}, cause {}", this.ctBehavior.getLongName(), e.getReason());
 
-            if(log.isDebugEnabled())
-                e.printStackTrace(App.sysout);
+                if (log.isDebugEnabled())
+                    e.printStackTrace(App.syserr);
+            }
         }
     }
 
@@ -91,33 +92,8 @@ public class BehaviorInstrumenter implements Instrumenter {
      * @throws CannotCompileException
      */
     private void traceExecutionInstrumentation() throws CannotCompileException {
-        ctBehavior.insertBefore(new Callback("$args") {
-            @Override
-            public void result(Object[] objects) {
-                Object[] args = (Object[]) objects[0];
-                String trace = "[START]" + ctBehavior.getDeclaringClass().getName() + '.' + ctBehavior.getName();
-
-                trace += "(";
-                for (Object object : args) {
-                    if(object != null) {
-//                        TODO: When time comes generate a helper to pretty print method parameters to handle primitive type and other well known type (List, Map, String, int, double)
-//                        For Other object we will only print his hashcode.
-                        trace += object.toString().length() > 30 ? object.hashCode() : object.toString() + ", ";
-                    } else
-                        trace += "null, ";
-                }
-                trace += ")";
-
-                AnalysisContext.getAnalysisContext().addExecutionTrace(trace);
-            }
-        }.sourceCode());
-
-        ctBehavior.insertAfter(new Callback("\"\"") {
-            @Override
-            public void result(Object[] objects) {
-                AnalysisContext.getAnalysisContext().addExecutionTrace("[END]");
-            }
-        }.sourceCode());
+        String beforeInstr = ctBehavior.getDeclaringClass().getName() + '.' + ctBehavior.getName();
+        ctBehavior.insertBefore("{ AnalysisContext.addStartExecutionTrace(\"" + beforeInstr + "\", $args); }");
     }
 
     protected void lineCoverageInstrumentation() throws BadBytecode {
@@ -128,7 +104,6 @@ public class BehaviorInstrumenter implements Instrumenter {
 
             instrumentBlockIndexedAt(codeAttribute, getBlocks()[current++].index());
         }
-
     }
 
     private void instrumentBlockIndexedAt(CodeAttribute codeAttribute, int blockIndex) throws BadBytecode {
@@ -162,6 +137,8 @@ public class BehaviorInstrumenter implements Instrumenter {
     }
 
     private void insertLineCoverageCallback(Bytecode bytecode, int blockIndex, int lineNumber) {
+        if(AnalysisContext.getAnalysisContext().isInstrumented(this.ctBehavior.getName() + this.ctBehavior.getSignature()))
+            log.error("It is being reinstrumented");
         bytecode.addLdc(this.getCtBehavior().getDeclaringClass().getName());
         // Here we use getDescriptor to avoid anything about polymorphism in input project.
         bytecode.addLdc(this.getCtBehavior().getName() + this.getCtBehavior().getMethodInfo().getDescriptor());

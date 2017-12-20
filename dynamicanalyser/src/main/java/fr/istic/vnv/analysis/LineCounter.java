@@ -16,7 +16,11 @@ public class LineCounter {
         this.blocksCounters = new HashMap<>();
     }
 
-    public void createCounter(int blockId) {
+    public void createCounter(int blockId) throws Exception {
+        if(this.blocksCounters.containsKey(blockId)) {
+            throw new Exception("For some reason a counter is being override !!!");
+        }
+
         this.blocksCounters.put(blockId, 0);
     }
 

@@ -1,5 +1,6 @@
 package fr.istic.vnv.instrumentation;
 
+import fr.istic.vnv.analysis.AnalysisContext;
 import javassist.CtBehavior;
 import javassist.CtClass;
 import org.slf4j.Logger;
@@ -32,12 +33,18 @@ public class ClassInstrumenter implements Instrumenter {
 
         for(CtBehavior ctBehavior: this.ctClass.getDeclaredBehaviors())
             this.behaviorInstrumenters.add(new BehaviorInstrumenter(ctBehavior, type));
+
+        this.ctClass.getClassPool().importPackage("fr.istic.vnv.analysis");
     }
 
     public void instrument() {
-        log.trace("Instrument class {}", ctClass.getName());
-        for(BehaviorInstrumenter behaviorInstrumenter : behaviorInstrumenters)
-            behaviorInstrumenter.instrument();
+        log.debug("Instrument class {}", ctClass.getName());
+        for(BehaviorInstrumenter behaviorInstrumenter : behaviorInstrumenters) {
+            if(!AnalysisContext.getAnalysisContext().isInstrumented(behaviorInstrumenter.getCtBehavior().getLongName() + behaviorInstrumenter.getCtBehavior().getSignature())) {
+                AnalysisContext.getAnalysisContext().instrument(behaviorInstrumenter.getCtBehavior().getLongName() + behaviorInstrumenter.getCtBehavior().getSignature());
+                behaviorInstrumenter.instrument();
+            }
+        }
     }
 
     /**
