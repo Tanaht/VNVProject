@@ -36,14 +36,22 @@ public class TestLineCounter {
 
     @Test
     void should_not_be_empty(){
-        lineCounter.createCounter(1);
+        try {
+            lineCounter.createCounter(1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         assertThat(lineCounter.getBlocksCounters().isEmpty(),is(not(equalTo(true))));
     }
 
     @Test
     void should_contain_correct_blockId(){
-        lineCounter.createCounter(1);
-        lineCounter.createCounter(2);
+        try {
+            lineCounter.createCounter(1);
+            lineCounter.createCounter(2);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         assertThat(lineCounter.getBlocksCounters().keySet(),containsInAnyOrder(1,2));
     }
@@ -52,7 +60,11 @@ public class TestLineCounter {
     @Test
     void should_have_zero_execution_time(){
         int blockId = 1;
-        lineCounter.createCounter(blockId);
+        try {
+            lineCounter.createCounter(blockId);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         assertThat(lineCounter.getBlocksCounters().get(blockId),is(equalTo(0)));
     }
@@ -60,7 +72,11 @@ public class TestLineCounter {
     @Test
     void should_have_one_in_execution_time(){
         int blockId = 1;
-        lineCounter.createCounter(blockId);
+        try {
+            lineCounter.createCounter(blockId);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         lineCounter.increment(blockId);
 
         assertThat(lineCounter.getBlocksCounters().get(blockId),is(equalTo(1)));
