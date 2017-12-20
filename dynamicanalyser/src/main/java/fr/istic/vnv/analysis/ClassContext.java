@@ -4,10 +4,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Class representation to see what is it executed in a class.
+ */
 public class ClassContext {
     private String longName;
     private Map<String, BehaviorContext> behaviorContexts;
 
+    /**
+     *
+     * @param longName The name of the class associate with it package. Example namePackage.ClassName
+     */
     public ClassContext(String longName) {
         this.longName = longName;
         this.behaviorContexts = new HashMap<>();
@@ -15,8 +22,8 @@ public class ClassContext {
 
     /**
      * Retrieve ClassContext, if not found, create it.
-     * @param methodName
-     * @return
+     * @param methodName The name of the method and it descriptor you want to get it BehaviorContext.
+     * @return The BehaviorContext who represent the method execution.
      */
     public BehaviorContext getBehaviorContext(String methodName) {
         Optional<BehaviorContext> behaviorContextOptional = Optional.ofNullable(this.behaviorContexts.get(methodName));
@@ -27,6 +34,14 @@ public class ClassContext {
         BehaviorContext behaviorContext = new BehaviorContext(methodName);
         this.behaviorContexts.put(methodName, behaviorContext);
         return behaviorContext;
+    }
+
+    /**
+     * only for test
+     * @return
+     */
+    protected Map<String, BehaviorContext> getBehaviorContexts() {
+        return behaviorContexts;
     }
 
     @Override

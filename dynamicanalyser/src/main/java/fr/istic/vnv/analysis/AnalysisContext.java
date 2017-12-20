@@ -6,11 +6,18 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+/**
+ * Singleton class. Contains the trace execution of each class.
+ */
 public class AnalysisContext {
     private static Logger log = LoggerFactory.getLogger(AnalysisContext.class);
 
     private static AnalysisContext analysisContext;
 
+    /**
+     * Get the only instance of AnalysisContext possible
+     * @return Instance of AnalysisContext
+     */
     public static AnalysisContext getAnalysisContext() {
         if(analysisContext == null)
             analysisContext = new AnalysisContext();
@@ -38,6 +45,13 @@ public class AnalysisContext {
         log.trace("At {} {} Increment counter of block {} at line {}", className, methodName, block, lineNumber);
     }
 
+    /**
+     * Creating a counter for a method class in a specific block of the method
+     * @param className The name of the class where there is the method
+     * @param methodName The name of the method where you want to create a counter block
+     * @param block The number of the specific block where you want to associate a counter
+     * @param lineNumber The line number in the source code where the block start
+     */
     public static void createBranchCoverage(String className, String methodName, int block, int lineNumber) {
         try {
             AnalysisContext context = getAnalysisContext();
@@ -139,8 +153,8 @@ public class AnalysisContext {
 
     /**
      * Retrieve ClassContext, if not found, create it.
-     * @param classname
-     * @return
+     * @param classname The name of the class you want to get the ClassContext
+     * @return The ClassContext, or create it if not exist
      */
     public ClassContext getClassContext(String classname) {
         Optional<ClassContext> classContextOptional = Optional.ofNullable(this.classContexts.get(classname));
@@ -153,6 +167,10 @@ public class AnalysisContext {
         return classContext;
     }
 
+    /**
+     * Return a map where a name class is associate with it context
+     * @return The map where each name class is associate with it classContext
+     */
     public Map<String, ClassContext> getClassContexts() {
         return this.classContexts;
     }
