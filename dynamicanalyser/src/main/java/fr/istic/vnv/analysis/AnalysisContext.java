@@ -89,6 +89,14 @@ public class AnalysisContext {
         this.instrumentedMethods = new ArrayList<>();
     }
 
+    /**
+     * only for tests
+     * @return
+     */
+    protected static AnalysisContext getResetSingleton(){
+        return new AnalysisContext();
+    }
+
     public void addExecutionTrace(String message) {
         getAnalysisContext().executionTrace.add(message);
     }
