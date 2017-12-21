@@ -54,9 +54,9 @@ public class App {
     private ReportGenerator generator;
 
     /**
-     *
-     * @param projectDirectory
-     * @throws IOException
+     * Initialize all the project analyse
+     * @param projectDirectory path of a maven project to analyse
+     * @throws IOException Path doesn't exist
      * @throws XmlPullParserException
      */
     public App(File projectDirectory) throws IOException, XmlPullParserException {
@@ -91,7 +91,7 @@ public class App {
     }
 
     /**
-     *
+     * Add the dependencies of the project to instrument to your project
      * @throws InterruptedException
      * @throws IOException
      */
@@ -103,7 +103,7 @@ public class App {
     }
 
     /**
-     *
+     * Initialize all the tests of the project to analyse
      * @return
      * @throws FileNotFoundException
      */
@@ -244,7 +244,7 @@ public class App {
     }
 
     /**
-     *
+     * Run a list of tests
      * @param testSuites
      * @throws ClassNotFoundException
      * @throws InitializationError
