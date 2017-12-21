@@ -1,4 +1,6 @@
 package fr.istic.vnv.utils;
 
-public class TestExtendedTextListener {
+public class TestExtendedTextListener{
+
+    private ExtendedTextListener extendedTextListener;
 }
