@@ -12,10 +12,19 @@ public class TextReportGenerator extends ReportGenerator {
     private Logger log = LoggerFactory.getLogger(TextReportGenerator.class);
     private int executionTraceCounter;
 
+    /**
+     *
+     * @param saveFolder path to save report
+     * @throws IOException Append when the path file doesn't exist
+     */
     public TextReportGenerator(File saveFolder) throws IOException {
         super(saveFolder);
     }
 
+    /**
+     * Save the result of the branch coverage
+     * @param stream Stream to save the result of the branch coverage
+     */
     private void saveBranchCoverage(PrintStream stream) {
         log.info("Generating report for Branch Coverage Details...");
         stream.println("Branch Coverage:");
@@ -28,6 +37,9 @@ public class TextReportGenerator extends ReportGenerator {
         stream.close();
     }
 
+    /**
+     * Save the final report (not all if the result is to big) to the file give in the constructor
+     */
     public void saveExecutionTraceUntilThen() {
         File executionTraceFragment = FileUtils.getFile(super.getSaveFolder(), "VNVReport-ExecutionTrace." + ++executionTraceCounter + ".txt");
         try {

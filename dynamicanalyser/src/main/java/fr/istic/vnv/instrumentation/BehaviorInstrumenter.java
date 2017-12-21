@@ -25,6 +25,11 @@ public class BehaviorInstrumenter implements Instrumenter {
     private ClassInstrumenter.CLASS type;
     private CtClass self;
 
+    /**
+     * initialize a method instrumentation
+     * @param behavior
+     * @param type
+     */
     public BehaviorInstrumenter(CtBehavior behavior, ClassInstrumenter.CLASS type) {
         this.ctBehavior = behavior;
         this.type = type;
@@ -37,6 +42,10 @@ public class BehaviorInstrumenter implements Instrumenter {
         }
     }
 
+    /**
+     * Return Object who represent a method to instrument
+     * @return
+     */
     public CtBehavior getCtBehavior() {
         return ctBehavior;
     }
@@ -50,6 +59,9 @@ public class BehaviorInstrumenter implements Instrumenter {
         return new ControlFlow(this.ctBehavior.getDeclaringClass(), this.ctBehavior.getMethodInfo()).basicBlocks();
     }
 
+    /**
+     * Start the instrument of the class gived in the constructor
+     */
     public void instrument() {
         if (!this.type.equals(ClassInstrumenter.CLASS.COMMON)) {
             log.trace("{} is not instrumented because not common class", this.ctBehavior.getDeclaringClass().getName());
@@ -96,6 +108,10 @@ public class BehaviorInstrumenter implements Instrumenter {
         ctBehavior.insertBefore("{ AnalysisContext.addStartExecutionTrace(\"" + beforeInstr + "\", $args); }");
     }
 
+    /**
+     * Start the instrumentation of the line coverage
+     * @throws BadBytecode
+     */
     protected void lineCoverageInstrumentation() throws BadBytecode {
         CodeAttribute codeAttribute = this.ctBehavior.getMethodInfo().getCodeAttribute();
 
@@ -106,6 +122,12 @@ public class BehaviorInstrumenter implements Instrumenter {
         }
     }
 
+    /**
+     * Instrument a specif block method
+     * @param codeAttribute
+     * @param blockIndex
+     * @throws BadBytecode
+     */
     private void instrumentBlockIndexedAt(CodeAttribute codeAttribute, int blockIndex) throws BadBytecode {
         ControlFlow.Block[] blocks = getBlocks();
         Bytecode bytecode = null;
@@ -136,6 +158,12 @@ public class BehaviorInstrumenter implements Instrumenter {
         }
     }
 
+    /**
+     * Insert byteCode on a specific blockIndex
+     * @param bytecode
+     * @param blockIndex
+     * @param lineNumber
+     */
     private void insertLineCoverageCallback(Bytecode bytecode, int blockIndex, int lineNumber) {
         if(AnalysisContext.getAnalysisContext().isInstrumented(this.ctBehavior.getName() + this.ctBehavior.getSignature()))
             log.error("It is being reinstrumented");

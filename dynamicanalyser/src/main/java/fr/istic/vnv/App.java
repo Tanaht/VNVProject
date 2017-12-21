@@ -53,6 +53,12 @@ public class App {
     private Loader loader;
     private ReportGenerator generator;
 
+    /**
+     *
+     * @param projectDirectory
+     * @throws IOException
+     * @throws XmlPullParserException
+     */
     public App(File projectDirectory) throws IOException, XmlPullParserException {
         this.projectDirectory = projectDirectory;
 
@@ -84,6 +90,11 @@ public class App {
         this.generator = ReportGeneratorFactory.getTextReportGenerator(FileUtils.getFile(projectDirectory, analysisSaveFolder));
     }
 
+    /**
+     *
+     * @throws InterruptedException
+     * @throws IOException
+     */
     public void  buildDependencies() throws InterruptedException, IOException {
         log.info("Generating Dependencies into {}... (it can take a few seconds)", FileUtils.getFile(projectDirectory, dependencyFolder).getAbsolutePath());
         Process generatingDependenciesProcess = Runtime.getRuntime().exec("mvn dependency:copy-dependencies -DoutputDirectory=" + dependencyFolder, null,  projectDirectory);
@@ -91,6 +102,11 @@ public class App {
         log.info("...Done");
     }
 
+    /**
+     *
+     * @return
+     * @throws FileNotFoundException
+     */
     private Collection<File> initializeTestRuns() throws FileNotFoundException {
         log.info("Start Dynamic analysis of {}", projectDirectory.getAbsolutePath());
 
@@ -181,6 +197,10 @@ public class App {
         }
     }
 
+    /**
+     *
+     * @return
+     */
     private Translator getApplicationTransaltor() {
         return new Translator() {
             @Override
@@ -222,6 +242,14 @@ public class App {
             }
         };
     }
+
+    /**
+     *
+     * @param testSuites
+     * @throws ClassNotFoundException
+     * @throws InitializationError
+     * @throws IOException
+     */
     private void runTests(Collection<File> testSuites) throws ClassNotFoundException, InitializationError, IOException {
         List<Class> classesToTest = new ArrayList<>();
 
@@ -252,6 +280,10 @@ public class App {
         log.info("report successfully saved in {} !", FileUtils.getFile(projectDirectory, analysisSaveFolder).getAbsolutePath());
     }
 
+    /**
+     *
+     * @throws IOException
+     */
     public void run() throws IOException {
 
         Collection<File> testSuites = initializeTestRuns();

@@ -8,6 +8,10 @@ public class Config {
     private static Config config;
     private static Logger log = LoggerFactory.getLogger(Config.class);
 
+    /**
+     * Return the singleton of the class config
+     * @return
+     */
     public static Config get() {
         if(config == null)
             config = new Config();
@@ -18,6 +22,9 @@ public class Config {
     private boolean doExecutionTrace, doBranchCoverage, doOutputRedirection;
     private int traceDepth;
 
+    /**
+     * Initialize the configuration
+     */
     private Config() {
         String executionTrace = System.getProperty("instrumentation.execution_trace");
         String branchCoverage = System.getProperty("instrumentation.branch_coverage");
@@ -59,19 +66,34 @@ public class Config {
         }
     }
 
-
+    /**
+     * true if you want to display all the trace execution
+     * @return
+     */
     public boolean doExecutionTrace() {
         return doExecutionTrace;
     }
 
+    /**
+     * true if you want to do active the branch coverage
+     * @return
+     */
     public boolean doBranchCoverage() {
         return doBranchCoverage;
     }
 
+    /**
+     * true if you want to redirect the std output
+     * @return
+     */
     public boolean doOutputRedirection() {
         return doOutputRedirection;
     }
 
+    /**
+     * return the max depth of a method to instrument
+     * @return
+     */
     public int getTraceDepth() {
         return traceDepth;
     }

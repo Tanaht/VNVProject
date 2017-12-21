@@ -17,6 +17,11 @@ public class ExtendedTextListener extends RunListener {
     private int testsCounter, testsFinished;
     private ReportGenerator generator;
 
+    /**
+     * Initialize an object to launch the project to instrument
+     * @param generator
+     * @param testsCounter
+     */
     public ExtendedTextListener(ReportGenerator generator, int testsCounter) {
         this.testsCounter = testsCounter;
         this.generator = generator;
@@ -70,6 +75,10 @@ public class ExtendedTextListener extends RunListener {
 
     }
 
+    /**
+     * Number of test failed
+     * @return Number of test failed
+     */
     public int getFailuresCount() {
         return failuresCount;
     }

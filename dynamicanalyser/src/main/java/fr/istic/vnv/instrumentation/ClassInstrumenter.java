@@ -25,6 +25,10 @@ public class ClassInstrumenter implements Instrumenter {
         COMMON;
     }
 
+    /**
+     * initialize a class instrumentation
+     * @param ctClass class to instrument
+     */
     public ClassInstrumenter(CtClass ctClass) {
         this.ctClass = ctClass;
         CLASS type = getClassType();
@@ -37,6 +41,9 @@ public class ClassInstrumenter implements Instrumenter {
         this.ctClass.getClassPool().importPackage("fr.istic.vnv.analysis");
     }
 
+    /**
+     * Start the instrument of the class gived in the constructor
+     */
     public void instrument() {
         log.debug("Instrument class {}", ctClass.getName());
         for(BehaviorInstrumenter behaviorInstrumenter : behaviorInstrumenters) {
