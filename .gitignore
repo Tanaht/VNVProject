@@ -15,3 +15,13 @@ hs_err_pid*
 
 vnvproject\.iml
 target/
+
+*.iml
+
+VNVReport\.txt
+
+err\.txt
+
+metastore_db/
+
+derby\.log
