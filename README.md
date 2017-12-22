@@ -11,7 +11,12 @@ And execute the command on the root of maven project to be analyzed:
 
 ```java -jar dynamicanalyser-1.0-SNAPSHOT-jar-with-dependencies.jar ./```
 
+Of course you can use system property to extend normal behavior of this tool, see "Project Parameters" below.
+
 The dynamic analyser program take the path to maven project in parameter so we need to add "./" in the command.
+
+
+The folder 'input' in this project is not usefull at all it's just a little project used to test our dynamic analyser.
 
 ### Project Requirements
 This project use mvn command so it is require to have mvn installed and correctly set in $PATH.
