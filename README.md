@@ -3,13 +3,23 @@ VNVProject
 
 A project about Dynamic Analysis in the context of Validations & Verifications lessons
 
-###Project Requirements
+To run this tools first of all generate a jar file with the command: mvn package.
+
+Take the jar-with-dependencies generated in the target folder and paste it onto the maven project who needs to be analysed.
+ 
+And execute the command on the root of maven project to be analyzed:
+
+```java -jar dynamicanalyser-1.0-SNAPSHOT-jar-with-dependencies.jar ./```
+
+The dynamic analyser program take the path to maven project in parameter so we need to add "./" in the command.
+
+### Project Requirements
 This project use mvn command so it is require to have mvn installed and correctly set in $PATH.
 
-###Project Parameters
+### Project Parameters
 
 
-####There is 3 System properties this application used:
+#### There is 3 System properties this application used:
 
 instrumentation.execution_trace: true|false tells VNVProject to generate a Trace Execution report. (default set to false).
 
@@ -22,7 +32,7 @@ if instrumentation.execution_trace is set to true there is a last system propert
 instrumentation.execution_trace.depth: [0..9]+|max tells VNVProject to generate a Trace execution report 
 but for each test run it will record only a number of trace execution equals to this number, 
 if it is set to 'max', then it will record all traces execution possible. (Default set to 3)
-####How to use them ?
+#### How to use them ?
 
 These properties can be set when starting the program like this:
 
@@ -31,7 +41,7 @@ Replace $(input_project.home) with relative or absolute path to input project.
 java -Dinstrumentation.execution_trace=true -Dlog.redirect_output=false -jar vnvproject.jar $(input_Project.home)
 ```
 
-###Branch Coverage/Line Coverage:
+### Branch Coverage/Line Coverage:
 
 The branch coverage report is presented in a text file at the following URL: 
 $(input_Project.home)/target/vnv/vnv-analysis/VNVReport-BranchCoverage.txt
@@ -91,7 +101,7 @@ But the report say there is 12 blocks.
 Infact in this 130th line, there is one block before the start of the OR instructions, the 10 blocks of the OR instructions and one last block that is composed of the return instruction.
 So there is effectively 12 blocks, and this is why the first block and the last one are executed the same time: 50 time. because they are always on each isValueCode() method call.
 
-###Execution Trace:
+### Execution Trace:
 On this project the execution trace instrumentation is the less stable instrumentation.
 
 First of all we recommand to not perform trace execution on project with a lot of unit test: (More than 2000)
@@ -103,4 +113,9 @@ Common bugs are
 - OutOfMemoryError (even if it seems to be fixed, it appears less frequently)
 - Endless Loop (Unable to know why it is looping)
 
-For now only commons-cli input project seems to works correctly with trace execution.
+
+### Sucessfull run of DynamicAnalyser:
+
+- For now only commons-cli input project seems to works correctly with trace execution.
+- For Commons-collection it runs very correctly with a depth of 3 in execution trace: ```~/project/commons-collections $ java -Dinstrumentation.execution_trace=true -jar dynamicanalyser-1.0-SNAPSHOT-jar-with-dependencies.jar ./```
+- For commons-lang it runs without major problems with the same settings of commons-collection.

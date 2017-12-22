@@ -330,6 +330,7 @@ public class App {
 
             if(log.isDebugEnabled())
                 e.printStackTrace(syserr);
+            return;
         }
 
         try {
